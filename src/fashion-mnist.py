@@ -1,46 +1,48 @@
+"""
+This script demonstrates the training and evaluation of a neural network model
+using the FashionMNIST dataset. It defines a simple neural network architecture,
+trains the model on the training dataset, and evaluates its performance on the test
+dataset.
+
+It is based off of: https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html
+"""
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
-# Download training data from open datasets.
-training_data = datasets.FashionMNIST(
-    root="data",
-    train=True,
-    download=True,
-    transform=ToTensor(),
-)
 
-# Download test data from open datasets.
-test_data = datasets.FashionMNIST(
-    root="data",
-    train=False,
-    download=True,
-    transform=ToTensor(),
-)
+def get_dataloaders():
+    # Download training data from open datasets.
+    training_data = datasets.FashionMNIST(
+        root="data",
+        train=True,
+        download=True,
+        transform=ToTensor(),
+    )
 
-batch_size = 64
+    # Download test data from open datasets.
+    test_data = datasets.FashionMNIST(
+        root="data",
+        train=False,
+        download=True,
+        transform=ToTensor(),
+    )
 
-# Create data loaders.
-train_dataloader = DataLoader(training_data, batch_size=batch_size)
-test_dataloader = DataLoader(test_data, batch_size=batch_size)
+    batch_size = 64
 
-for X, y in test_dataloader:
-    print(f"Shape of X [N, C, H, W]: {X.shape}")
-    print(f"Shape of y: {y.shape} {y.dtype}")
-    break
+    # Create data loaders.
+    train_dataloader = DataLoader(training_data, batch_size=batch_size)
+    test_dataloader = DataLoader(test_data, batch_size=batch_size)
 
-# Get cpu, gpu or mps device for training. On macOS the mps can be used and is backed
-# by the Metal GPU APIs.
-device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps"
-    if torch.backends.mps.is_available()
-    else "cpu"
-)
-print(f"Using {device} device")
+    for X, y in test_dataloader:
+        print(f"Shape of X [N, C, H, W]: {X.shape}")
+        print(f"Shape of y: {y.shape} {y.dtype}")
+        break
+
+    return (train_dataloader, test_dataloader)
 
 
 class NeuralNetwork(nn.Module):
@@ -68,20 +70,10 @@ class NeuralNetwork(nn.Module):
         return logits
 
 
-# Shape of X [N, C, H, W]: torch.Size([64, 1, 28, 28])
-# Shape of y: torch.Size([64]) torch.int64
-model = NeuralNetwork().to(device)
-print(model)
-
-# To train a model, we need a loss function and an optimizer.
-
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1 / 1000)
-
-
 def train(
     dataloader: DataLoader,
     model: nn.Module,
+    device: str,
     loss_fn: nn.CrossEntropyLoss,
     optimizer: torch.optim.SGD,
 ):
@@ -109,7 +101,10 @@ def train(
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
-def test(dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module):
+def test(dataloader: DataLoader, model: nn.Module, device: str, loss_fn: nn.Module):
+    """
+    Check the model performance against the
+    """
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
 
@@ -132,12 +127,30 @@ def test(dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module):
     )
 
 
+def setup_model(device: str):
+    model = NeuralNetwork().to(device)
+    # Shape of X [N, C, H, W]: torch.Size([64, 1, 28, 28])
+    # Shape of y: torch.Size([64]) torch.int64
+
+    # To train a model, we need a loss function and an optimizer.
+
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=1 / 1000)
+    return (model, loss_fn, optimizer)
+
+
 def run_training():
+    print('Using "mps" device, which is backed by Metal on macOS.')
+    device = "mps"
+
+    (model, loss_fn, optimizer) = setup_model(device)
+    (train_dataloader, test_dataloader) = get_dataloaders()
+
     epochs = 5
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer)
-        test(test_dataloader, model, loss_fn)
+        train(train_dataloader, model, device, loss_fn, optimizer)
+        test(test_dataloader, model, device, loss_fn)
     print("Done!")
 
 
