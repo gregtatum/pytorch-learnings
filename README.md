@@ -7,11 +7,11 @@ This repo contains my learnings for pytorch.
 The bare minimum hello world for pytorch.
 
 ```
-poetry run python src/pytorch-hello.py
+poetry run src/pytorch-hello.py
 ```
 
 Train a simple feed forward neural network for fashionMNIST.
 
 ```
-poetry run python src/fashion-mnist.py
+poetry run src/fashion-mnist.py
 ```

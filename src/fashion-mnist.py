@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 This script demonstrates the training and evaluation of a neural network model
 using the FashionMNIST dataset. It defines a simple neural network architecture,
