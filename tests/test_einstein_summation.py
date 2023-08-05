@@ -79,4 +79,13 @@ def test_einstein_summation():
         ),
     )
 
+    # The letters are just convention.
+    assert torch.allclose(
+        torch.einsum("rq,rq->r", a, b),
+        torch.tensor([
+            torch.dot(a[0], b[0]),
+            torch.dot(a[1], b[1]),
+        ]),
+    )
+
     # fmt: on
