@@ -21,7 +21,7 @@ vocab_size = 5000
 embedding_dim = 5
 learning_rate = 0.001
 num_epochs = 10
-sentence_sample_size = 10000
+sentence_sample_size = 1000
 learning_rate = 0.001
 context_size = 2
 
@@ -68,9 +68,19 @@ class LanguageModeler(nn.Module):
         return log_probs
 
 
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+    print("Using mps")
+elif torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Using cuda")
+else:
+    device = torch.device("cpu")
+    print("Using cpu")
+
 losses = []
 criterion = nn.NLLLoss()
-model = LanguageModeler(vocab_size, embedding_dim, context_size)
+model = LanguageModeler(vocab_size, embedding_dim, context_size).to(device)
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
 
@@ -81,7 +91,7 @@ def print_embedding(tokens, text):
     print(text)
     print("Pieces:", tokens.encode_as_pieces(text))
     print("Ids:", example_ids)
-    print("Embedding:", model.embeddings(torch.tensor(example_ids)))
+    print("Embedding:", model.embeddings(torch.tensor(example_ids, device=device)))
     print()
 
 
@@ -89,14 +99,13 @@ print_embedding(tokens_en, "The quick brown fox.")
 
 print("Accessing data")
 dataset_slice = dataset["translation"]
-print(dataset)
-print("Getting dataset length")
-dataset_len = len(dataset_slice)
+dataset_len = dataset.num_rows
+print("Data is loaded")
 
 for epoch in range(num_epochs):
     total_loss = 0.0
 
-    print(f"Starting epoch {epoch}.", end=" ")
+    print(f"Starting epoch {epoch}.")
     for training_i in range(sentence_sample_size):
         sentence = dataset_slice[
             (epoch * sentence_sample_size + training_i) % dataset_len
@@ -105,9 +114,15 @@ for epoch in range(num_epochs):
 
         for i in range(context_size, len(sentence_ids)):
             context = torch.tensor(
-                [sentence_ids[i - j - 1] for j in range(context_size)], dtype=torch.long
+                [sentence_ids[i - j - 1] for j in range(context_size)],
+                dtype=torch.long,
+                device=device,
             )
-            target_word = torch.tensor([sentence_ids[i]], dtype=torch.long)
+            target_word = torch.tensor(
+                [sentence_ids[i]],
+                dtype=torch.long,
+                device=device,
+            )
 
             # Reset the gradients on each step.
             model.zero_grad()

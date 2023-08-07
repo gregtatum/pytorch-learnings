@@ -11,6 +11,9 @@ through SentencePiece.
     ├── es.model
     ├── es.txt
     └── es.vocab
+
+https://github.com/google/sentencepiece
+https://github.com/google/sentencepiece/tree/master/python
 """
 
 from datasets import load_dataset_builder, load_dataset
@@ -39,7 +42,7 @@ data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
 text_en = path.join(data_path, "en.txt")
 text_es = path.join(data_path, "es.txt")
 model_en = path.join(data_path, "en.model")
-model_es = path.join(data_path, "en.model")
+model_es = path.join(data_path, "es.model")
 
 write_file(text_en, "en")
 write_file(text_es, "es")
@@ -86,3 +89,24 @@ def output_sentence_piece(lang):
 
 output_sentence_piece("en")
 output_sentence_piece("es")
+
+
+def max_length(lang):
+    model_path = path.join(data_path, f"{lang}.model")
+    text_path = path.join(data_path, f"{lang}.txt")
+    sp = spm.SentencePieceProcessor()
+    sp.load(model_path)
+
+    max_length = 0
+
+    with open(text_path, "r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file):
+            length = len(sp.encode_as_ids(line))
+            max_length = max(max_length, length)
+            if line_number == 100_000:
+                break
+
+    return max_length
+
+
+print("Max length for en:", max_length("en"))

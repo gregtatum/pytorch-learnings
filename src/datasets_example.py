@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+"""
+This file demonstrates how to load in ParaCrawl through huggingface's "dataset" library.
+
+https://huggingface.co/docs/datasets/index
+https://huggingface.co/datasets/para_crawl/viewer/enes/train
+"""
+
 from datasets import load_dataset_builder, load_dataset
 
 print("Looking up the dataset")
@@ -45,10 +52,7 @@ dataset = load_dataset("para_crawl", "enes", split="train")
 print("Splitting data")
 dataset = dataset.train_test_split(test_size=0.1, shuffle=True, seed=1234)
 
-print(dataset)
-print(dataset["test"])
-
-print("Showing example data")
+print("\nShowing example data")
 for row in dataset["test"]["translation"][0:5]:
     en = row["en"]
     es = row["es"]
