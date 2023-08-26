@@ -21,6 +21,7 @@ import json
 import random
 from imgcat import imgcat
 import time
+from utils import naive_hash
 
 torch.manual_seed(1234)
 data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
@@ -34,13 +35,6 @@ if not path.exists(artifact_path):
 def save_json(path_str: str, out):
     with open(path_str, "w") as f:
         f.write(json.dumps(out, indent=2, sort_keys=True))
-
-
-def naive_hash(obj):
-    import hashlib
-
-    string = json.dumps(obj, sort_keys=True)
-    return hex(int(hashlib.sha256(string.encode("utf-8")).hexdigest(), 16))[3:12]
 
 
 num_epochs = 10000
