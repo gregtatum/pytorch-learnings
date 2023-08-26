@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from transformer import Transformer
-from utils import naive_hash
+from utils import naive_hash, get_device
 from utils.trainer_manager import TrainerManager
 import torch
 from torch import nn, optim, Tensor
@@ -8,6 +8,8 @@ from torch import nn, optim, Tensor
 """
 Train a transformer model.
 """
+
+device = get_device()
 
 # The hyper parameters.
 p = {
@@ -33,7 +35,8 @@ model = Transformer(
     p["d_ff"],
     p["max_seq_length"],
     p["dropout"],
-)
+    device=device,
+).to(device)
 model.train()
 
 # Generate random sample data
@@ -44,6 +47,7 @@ source_data = torch.randint(
     p["src_vocab_size"],
     # (batch_size, seq_length)
     (64, p["max_seq_length"]),
+    device=device,
 )
 
 target_data = torch.randint(
@@ -52,6 +56,7 @@ target_data = torch.randint(
     p["src_vocab_size"],
     # (batch_size, seq_length)
     (64, p["max_seq_length"]),
+    device=device,
 )
 
 criterion = nn.CrossEntropyLoss(ignore_index=0)

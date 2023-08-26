@@ -95,22 +95,22 @@ class TrainerManager:
         print(f" Loss data: {self.loss_path}")
         print(f" Model: {self.model_path}")
 
-        start_time = time.time()
-
         while self.epoch < num_epochs:
             if self.sigint_sent:
                 self.gracefully_exit()
+            start_time = time.time()
 
             print(f"Running epoch {self.epoch} of {num_epochs}")
 
-            self.losses.append(train_step(self.epoch))
+            loss = train_step(self.epoch)
+            self.losses.append(loss)
 
             self.epoch += 1
             self.graph_loss()
             self.save_model()
 
-        elapsed_time = time.time() - start_time
-        print(f" (time) {elapsed_time:.2f} seconds")
-        print(" (loss)", total_loss)
+            elapsed_time = time.time() - start_time
+            print(f" (time) {elapsed_time:.2f} seconds")
+            print(" (loss)", loss)
 
         print("Training complete, losses:", self.losses)

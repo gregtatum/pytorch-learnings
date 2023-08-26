@@ -9,7 +9,7 @@ from typing import Optional
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int):
+    def __init__(self, d_model: int, num_heads: int, device=None):
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -17,10 +17,10 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = d_model // num_heads
 
-        self.W_q = nn.Linear(d_model, d_model)
-        self.W_k = nn.Linear(d_model, d_model)
-        self.W_v = nn.Linear(d_model, d_model)
-        self.W_o = nn.Linear(d_model, d_model)
+        self.W_q = nn.Linear(d_model, d_model, device=device)
+        self.W_k = nn.Linear(d_model, d_model, device=device)
+        self.W_v = nn.Linear(d_model, d_model, device=device)
+        self.W_o = nn.Linear(d_model, d_model, device=device)
 
     def scaled_dot_product_attention(
         self, Q: Tensor, K: Tensor, V: Tensor, mask: Optional[Tensor] = None
@@ -51,10 +51,10 @@ class MultiHeadAttention(nn.Module):
 
 
 class PositionWiseFeedForward(nn.Module):
-    def __init__(self, d_model: int, d_ff: int):
+    def __init__(self, d_model: int, d_ff: int, device=None):
         super(PositionWiseFeedForward, self).__init__()
-        self.fc1 = nn.Linear(d_model, d_ff)
-        self.fc2 = nn.Linear(d_ff, d_model)
+        self.fc1 = nn.Linear(d_model, d_ff, device=device)
+        self.fc2 = nn.Linear(d_ff, d_model, device=device)
         self.relu = nn.ReLU()
 
     def forward(self, x: Tensor):
@@ -62,10 +62,10 @@ class PositionWiseFeedForward(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_seq_length: int):
+    def __init__(self, d_model: int, max_seq_length: int, device=None):
         super(PositionalEncoding, self).__init__()
 
-        pe = torch.zeros(max_seq_length, d_model)
+        pe = torch.zeros(max_seq_length, d_model, device=device)
         position = torch.arange(0, max_seq_length, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
@@ -81,12 +81,12 @@ class PositionalEncoding(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout):
+    def __init__(self, d_model, num_heads, d_ff, dropout, device=None):
         super(EncoderLayer, self).__init__()
-        self.self_attn = MultiHeadAttention(d_model, num_heads)
-        self.feed_forward = PositionWiseFeedForward(d_model, d_ff)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
+        self.self_attn = MultiHeadAttention(d_model, num_heads, device=device)
+        self.feed_forward = PositionWiseFeedForward(d_model, d_ff, device=device)
+        self.norm1 = nn.LayerNorm(d_model, device=device)
+        self.norm2 = nn.LayerNorm(d_model, device=device)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, mask):
@@ -129,11 +129,14 @@ class Transformer(nn.Module):
         d_ff,
         max_seq_length,
         dropout,
+        device=None,
     ):
         super(Transformer, self).__init__()
-        self.encoder_embedding = nn.Embedding(src_vocab_size, d_model)
-        self.decoder_embedding = nn.Embedding(tgt_vocab_size, d_model)
-        self.positional_encoding = PositionalEncoding(d_model, max_seq_length)
+        self.encoder_embedding = nn.Embedding(src_vocab_size, d_model, device=device)
+        self.decoder_embedding = nn.Embedding(tgt_vocab_size, d_model, device=device)
+        self.positional_encoding = PositionalEncoding(
+            d_model, max_seq_length, device=device
+        )
 
         self.encoder_layers = nn.ModuleList(
             [EncoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)]
@@ -144,19 +147,23 @@ class Transformer(nn.Module):
 
         self.fc = nn.Linear(d_model, tgt_vocab_size)
         self.dropout = nn.Dropout(dropout)
+        self.device = device
 
-    def generate_mask(self, src, tgt):
-        src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
-        tgt_mask = (tgt != 0).unsqueeze(1).unsqueeze(3)
-        seq_length = tgt.size(1)
+    def generate_mask(self, source, target, device=None):
+        src_mask = (source != 0).unsqueeze(1).unsqueeze(2)
+        tgt_mask = (target != 0).unsqueeze(1).unsqueeze(3)
+        seq_length = target.size(1)
         nopeak_mask = (
-            1 - torch.triu(torch.ones(1, seq_length, seq_length), diagonal=1)
+            1
+            - torch.triu(
+                torch.ones(1, seq_length, seq_length, device=device), diagonal=1
+            )
         ).bool()
         tgt_mask = tgt_mask & nopeak_mask
         return src_mask, tgt_mask
 
     def forward(self, src, tgt):
-        src_mask, tgt_mask = self.generate_mask(src, tgt)
+        src_mask, tgt_mask = self.generate_mask(src, tgt, device=self.device)
         src_embedded = self.dropout(
             self.positional_encoding(self.encoder_embedding(src))
         )
