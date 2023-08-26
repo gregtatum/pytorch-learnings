@@ -22,3 +22,8 @@ def output_plot(path):
     print()
     imgcat(open(path))
     print()
+
+
+def save_json(path_str: str, out):
+    with open(path_str, "w") as f:
+        f.write(json.dumps(out, indent=2, sort_keys=True))

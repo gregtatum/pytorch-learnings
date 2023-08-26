@@ -126,6 +126,7 @@ def artifact_path(postfix):
     return path.join(data_path, "embeddings", f"{language}-{param_hash}-{postfix}")
 
 
+# TODO - Use TrainerManager
 class Trainer:
     epoch = 0
     sigint_sent = False
