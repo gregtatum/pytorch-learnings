@@ -1,4 +1,5 @@
 import signal
+from typing import List
 
 from torch import nn
 from os import path, mkdir
@@ -22,7 +23,7 @@ class TrainerManager:
     epoch = 0
     sigint_sent = False
     name: str
-    losses = []
+    losses: List[float] = []
 
     def __init__(self, name: str, model: nn.Module, hyper_parameters: object):
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -71,7 +72,7 @@ class TrainerManager:
         plt.savefig(self.graph_path, dpi=150)
 
     def gracefully_exit(self):
-        imgcat(open(self.graph_path))
+        imgcat(open(self.graph_path, "r"))
         sys.exit(0)
 
     def save_hyperparameters(self):
@@ -85,7 +86,12 @@ class TrainerManager:
         )
         save_json(self.loss_path, self.losses)
 
-    def train(self, train_step, num_epochs):
+    def train(self, train_step, batch_size=0, num_epochs=0):
+        if batch_size == 0:
+            raise Exception("A batch_size must be provided.")
+        if num_epochs == 0:
+            raise Exception("A num_epochs must be provided.")
+
         self.save_hyperparameters()
         self.load_saved_model()
 
@@ -110,7 +116,10 @@ class TrainerManager:
             self.save_model()
 
             elapsed_time = time.time() - start_time
-            print(f" (time) {elapsed_time:.2f} seconds")
-            print(" (loss)", loss)
+            per_item_time = 1000.0 * elapsed_time / batch_size
+            print(f"  {elapsed_time:.2f} seconds elapsed for {batch_size} items")
+            print(f"  {per_item_time:.0f} ms per item ")
+            print(f"  {loss:.2f} loss")
 
-        print("Training complete, losses:", self.losses)
+        print("Training complete 🎉")
+        imgcat(open(self.graph_path, "r"))
