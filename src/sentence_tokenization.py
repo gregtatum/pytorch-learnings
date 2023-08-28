@@ -4,13 +4,15 @@
 This file loads the Spanish/English dataset from ParaCrawl, and generates a tokenization
 through SentencePiece.
 
-└── data
-    ├── en.model
-    ├── en.txt
-    ├── en.vocab
-    ├── es.model
-    ├── es.txt
-    └── es.vocab
+└── data/vocab
+    ├── {source_lang}.model
+    ├── {source_lang}.vocab
+    ├── {source_lang}.small.txt
+    ├── {source_lang}.txt
+    ├── {target_lang}.model
+    ├── {target_lang}.vocab
+    ├── {target_lang}.small.txt
+    └── {target_lang}.txt
 
 https://github.com/google/sentencepiece
 https://github.com/google/sentencepiece/tree/master/python
@@ -18,8 +20,11 @@ https://github.com/google/sentencepiece/tree/master/python
 
 from typing import Optional, TypedDict
 from datasets import load_dataset
-import sentencepiece as spm
-from os import path
+from sentencepiece import SentencePieceProcessor, SentencePieceTrainer
+from os import mkdir, path
+
+source_lang = "en"
+target_lang = "es"
 
 ParaCrawlDataset = TypedDict("ParaCrawlDataset", {"translation": list[dict[str, str]]})
 
@@ -29,52 +34,68 @@ dataset: Optional[ParaCrawlDataset] = None  # Lazily initialized
 def get_dataset() -> ParaCrawlDataset:
     global dataset
     if not dataset:
+        # Shuffle only so that the demo of the output is more interesting. In production
+        # this wouldn't be needed.
         dataset = load_dataset("para_crawl", "enes", split="train").shuffle()
     return dataset
 
 
-def write_file(output_path: str, lang: str) -> None:
-    if path.exists(output_path):
-        print(f"The text file '{output_path}' already exists.")
+def write_language_text_file(output_path: str, lang: str) -> None:
+    output_path_big = output_path + ".txt"
+    output_path_small = output_path + ".small.txt"
+
+    if path.exists(output_path_big):
+        print(f"The text file '{output_path_big}' already exists.")
     else:
-        print(f"Writing out file '{output_path}'.")
-        with open(output_path, "w", encoding="utf-8") as f:
+        print(f"Writing out file '{output_path_big}'.")
+        with open(output_path_big, "w", encoding="utf-8") as f:
             for row in get_dataset()["translation"]:
                 f.write(row[lang] + "\n")
 
+    if path.exists(output_path_small):
+        print(f"The text file '{output_path_small}' already exists.")
+    else:
+        print(f"Writing out file '{output_path_small}'.")
+        with open(output_path_big, "w", encoding="utf-8") as f:
+            for row in get_dataset()["translation"][:10_000]:
+                f.write(row[lang] + "\n")
 
-data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
-text_en = path.join(data_path, "en.txt")
-text_es = path.join(data_path, "es.txt")
-model_en = path.join(data_path, "en.model")
-model_es = path.join(data_path, "es.model")
 
-write_file(text_en, "en")
-write_file(text_es, "es")
+vocab_path = path.abspath(path.join(path.dirname(__file__), "../data/vocab"))
+if not path.exists(vocab_path):
+    mkdir(vocab_path)
+
+text_en = path.join(vocab_path, source_lang)
+text_es = path.join(vocab_path, target_lang)
+model_en = path.join(vocab_path, f"{source_lang}.model")
+model_es = path.join(vocab_path, f"{target_lang}.model")
+
+write_language_text_file(text_en, source_lang)
+write_language_text_file(text_es, target_lang)
 
 
 def run_sentence_piece(lang: str) -> None:
-    model_path = path.join(data_path, f"{lang}.model")
+    model_path = path.join(vocab_path, f"{lang}.model")
     if path.exists(model_path):
         print(f"The model file already exists: {model_path}")
     else:
         print(f"Running the training for {lang}")
-        spm.SentencePieceTrainer.train(
+        SentencePieceTrainer.train(
             input=text_en,
-            model_prefix=f"data/{lang}",
+            model_prefix=f"data/vocab/{lang}",
             vocab_size=5000,
             input_sentence_size=10000,
         )
 
 
-run_sentence_piece("en")
-run_sentence_piece("es")
+run_sentence_piece(source_lang)
+run_sentence_piece(target_lang)
 
 
 def output_sentence_piece(lang: str) -> None:
-    model_path = path.join(data_path, f"{lang}.model")
-    text_path = path.join(data_path, f"{lang}.txt")
-    sp = spm.SentencePieceProcessor()
+    model_path = path.join(vocab_path, f"{lang}.model")
+    text_path = path.join(vocab_path, f"{lang}.txt")
+    sp: SentencePieceProcessor = SentencePieceProcessor()
     sp.load(model_path)
 
     print("=============================================================")
@@ -82,7 +103,7 @@ def output_sentence_piece(lang: str) -> None:
     print("=============================================================")
 
     with open(text_path, "r", encoding="utf-8") as file:
-        # Read the first 10 lines
+        # Read the first few lines
         for line_number, line in enumerate(file):
             print("\n")
             print(line[:-1])
@@ -92,14 +113,14 @@ def output_sentence_piece(lang: str) -> None:
                 break
 
 
-output_sentence_piece("en")
-output_sentence_piece("es")
+output_sentence_piece(source_lang)
+output_sentence_piece(target_lang)
 
 
 def max_length(lang: str) -> int:
-    model_path = path.join(data_path, f"{lang}.model")
-    text_path = path.join(data_path, f"{lang}.txt")
-    sp = spm.SentencePieceProcessor()
+    model_path = path.join(vocab_path, f"{lang}.model")
+    text_path = path.join(vocab_path, f"{lang}.txt")
+    sp = SentencePieceProcessor()
     sp.load(model_path)
 
     max_length = 0
@@ -114,4 +135,4 @@ def max_length(lang: str) -> int:
     return max_length
 
 
-print("Max length for en:", max_length("en"))
+print(f"Max length for {source_lang}:", max_length(source_lang))

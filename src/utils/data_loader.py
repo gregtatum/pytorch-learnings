@@ -17,8 +17,8 @@ class Tokens:
 
 
 def __load_tokenizers(source_language: str, target_language: str) -> Tokens:
-    model_source = path.join(data_path, source_language + ".model")
-    model_target = path.join(data_path, target_language + ".model")
+    model_source = path.join(data_path, "vocab", source_language + ".model")
+    model_target = path.join(data_path, "vocab", target_language + ".model")
 
     if not path.exists(model_source):
         raise Exception(
@@ -40,8 +40,8 @@ def __load_data(
 ) -> list[dict]:
     if small:
         # Use a smaller text source for faster iterations.
-        source_txt = path.join(data_path, source_language + ".small.txt")
-        target_txt = path.join(data_path, target_language + ".small.txt")
+        source_txt = path.join(data_path, "vocab", source_language + ".small.txt")
+        target_txt = path.join(data_path, "vocab", target_language + ".small.txt")
 
         if not path.exists(source_txt):
             raise Exception(f"Can't find: {source_txt}")

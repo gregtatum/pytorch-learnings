@@ -13,8 +13,8 @@ artifact_path = path.join(data_path, "embeddings")
 
 
 def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
-    model_en = path.join(data_path, "en.model")
-    model_es = path.join(data_path, "es.model")
+    model_en = path.join(data_path, "vocab", "en.model")
+    model_es = path.join(data_path, "vocab", "es.model")
 
     if not path.exists(model_en):
         raise Exception('No "en" model was found, run sentence_tokenization.py first.')

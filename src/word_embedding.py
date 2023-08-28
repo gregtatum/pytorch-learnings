@@ -56,8 +56,8 @@ param_hash = naive_hash(p)
 
 
 def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
-    model_en = path.join(data_path, "en.model")
-    model_es = path.join(data_path, "es.model")
+    model_en = path.join(data_path, "vocab", "en.model")
+    model_es = path.join(data_path, "vocab", "es.model")
 
     if not path.exists(model_en):
         raise Exception('No "en" model was found, run sentence_tokenization.py first.')
@@ -193,7 +193,7 @@ class Trainer:
             self.__data = dataset["translation"]
             print("Data is loaded")
 
-            # with open(path.join(data_path, "en.small.txt")) as f:
+            # with open(path.join(data_path, "vocab", "en.small.txt")) as f:
             #     self.__data = [{"en": line} for line in f.readlines()]
 
         return cast(Any, self.__data)
