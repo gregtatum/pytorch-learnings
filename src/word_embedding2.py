@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import Tensor
 
 torch.manual_seed(1)
 
@@ -40,13 +41,13 @@ word_to_ix = {word: i for i, word in enumerate(vocab)}
 
 
 class NGramLanguageModeler(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, context_size):
+    def __init__(self, vocab_size: int, embedding_dim: int, context_size: int) -> None:
         super(NGramLanguageModeler, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.linear1 = nn.Linear(context_size * embedding_dim, 128)
         self.linear2 = nn.Linear(128, vocab_size)
 
-    def forward(self, inputs):
+    def forward(self, inputs: Tensor) -> Tensor:
         embeds = self.embeddings(inputs).view((1, -1))
         out = F.relu(self.linear1(embeds))
         out = self.linear2(out)

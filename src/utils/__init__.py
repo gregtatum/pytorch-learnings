@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import torch
 
 
@@ -18,7 +18,7 @@ def naive_hash(obj: object) -> str:
     return hex(int(hashlib.sha256(string.encode("utf-8")).hexdigest(), 16))[3:12]
 
 
-def output_plot(path):
+def output_plot(path: str) -> None:
     from imgcat import imgcat
     import matplotlib.pyplot as plt
 
@@ -30,7 +30,7 @@ def output_plot(path):
     print()
 
 
-def save_json(path_str: str, obj):
+def save_json(path_str: str, obj: Any) -> None:
     if (
         not isinstance(obj, Dict)
         and not isinstance(obj, list)
@@ -48,7 +48,7 @@ def save_json(path_str: str, obj):
 device: Optional[torch.device] = None
 
 
-def get_device():
+def get_device() -> torch.device:
     global device
     if not device:
         if torch.backends.mps.is_available():

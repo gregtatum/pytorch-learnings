@@ -17,7 +17,7 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 
 
-def get_dataloaders():
+def get_dataloaders() -> tuple[DataLoader, DataLoader]:
     # Download training data from open datasets.
     training_data = datasets.FashionMNIST(
         root="data",
@@ -56,7 +56,7 @@ class NeuralNetwork(nn.Module):
     neural network, we move it to the GPU or MPS if available.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
@@ -67,7 +67,7 @@ class NeuralNetwork(nn.Module):
             nn.Linear(512, 10),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
@@ -79,7 +79,7 @@ def train(
     device: str,
     loss_fn: nn.CrossEntropyLoss,
     optimizer: torch.optim.SGD,
-):
+) -> None:
     """
     In a single training loop, the model makes predictions on the training dataset
     (fed to it in batches), and backpropagates the prediction error to adjust the model’s
@@ -105,7 +105,9 @@ def train(
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
-def test(dataloader: DataLoader, model: nn.Module, device: str, loss_fn: nn.Module):
+def test(
+    dataloader: DataLoader, model: nn.Module, device: str, loss_fn: nn.Module
+) -> None:
     """
     Check the model performance against the
     """
@@ -132,7 +134,12 @@ def test(dataloader: DataLoader, model: nn.Module, device: str, loss_fn: nn.Modu
     )
 
 
-def setup_model(device: str):
+#
+
+
+def setup_model(
+    device: str,
+) -> tuple[NeuralNetwork, nn.CrossEntropyLoss, torch.optim.SGD]:
     model = NeuralNetwork().to(device)
     # Shape of X [N, C, H, W]: torch.Size([64, 1, 28, 28])
     # Shape of y: torch.Size([64]) torch.int64
@@ -144,7 +151,7 @@ def setup_model(device: str):
     return (model, loss_fn, optimizer)
 
 
-def run_training():
+def run_training() -> None:
     print('Using "mps" device, which is backed by Metal on macOS.')
     device = "mps"
 

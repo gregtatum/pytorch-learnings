@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+from typing import cast
 import torch
-from torch import nn
+from torch import Tensor, nn
 import sys
 import argparse
 from os import path
@@ -11,7 +12,7 @@ data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
 artifact_path = path.join(data_path, "embeddings")
 
 
-def load_tokenizers():
+def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
     model_en = path.join(data_path, "en.model")
     model_es = path.join(data_path, "es.model")
 
@@ -32,7 +33,7 @@ def load_tokenizers():
 tokens_en, tokens_es = load_tokenizers()
 
 
-def process_args():
+def process_args() -> tuple[str, str]:
     parser = argparse.ArgumentParser(
         description="Find the nearest words based on embeddings."
     )
@@ -44,7 +45,7 @@ def process_args():
     return args.embeddings, args.word
 
 
-def load_embeddings(embeddings_path):
+def load_embeddings(embeddings_path: str) -> tuple[nn.Embedding, Tensor]:
     embedding = nn.Embedding(5000, 5)
     state = torch.load(embeddings_path)
     embedding.load_state_dict(state)
@@ -52,17 +53,17 @@ def load_embeddings(embeddings_path):
     return embedding, all_weights
 
 
-def get_similarities(all_weights, word_embedded):
+def get_similarities(all_weights: Tensor, word_embedded: Tensor) -> list[str]:
     similarities = F.cosine_similarity(word_embedded, all_weights)
     results = list()
     for n in range(6):
-        index = torch.argmax(similarities).item()
+        index = cast(int, torch.argmax(similarities).item())
         similarities[index] = 0
         results.append(tokens_en.decode([index]))
     return results
 
 
-def main():
+def main() -> None:
     embeddings_path, word = process_args()
     embeddings, all_weights = load_embeddings(embeddings_path)
     tokens = tokens_en.encode_as_ids(word)

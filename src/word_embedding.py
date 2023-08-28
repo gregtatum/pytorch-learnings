@@ -6,11 +6,12 @@ Perform a word embedding, run src/sentence_tokenization.py first.
 https://pytorch.org/tutorials/beginner/nlp/word_embeddings_tutorial.html
 """
 
-from typing import Optional
+from typing import Any, Optional, cast
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import Tensor
 from sentencepiece import SentencePieceProcessor
 from datasets import load_dataset
 from os import path, mkdir
@@ -32,25 +33,29 @@ if not path.exists(path.join(data_path, "embeddings")):
     mkdir(path.join(data_path, "embeddings"))
 
 
-def save_json(path_str: str, out):
+def save_json(path_str: str, out: Any) -> None:
     with open(path_str, "w") as f:
         f.write(json.dumps(out, indent=2, sort_keys=True))
 
 
 num_epochs = 10000
 
+
 # Hyper parameters
-hyper_parameters = {
-    "vocab_size": 5000,
-    "embedding_dim": 5,
-    "sentences_per_epoch": 1000,
-    "learning_rate": 0.01,
-    "context_size": 2,
-}
-param_hash = naive_hash(hyper_parameters)
+class HyperParameters:
+    def __init__(self) -> None:
+        self.vocab_size = 5000
+        self.embedding_dim = 5
+        self.sentences_per_epoch = 1000
+        self.learning_rate = 0.01
+        self.context_size = 2
 
 
-def load_tokenizers():
+p = HyperParameters()
+param_hash = naive_hash(p)
+
+
+def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
     model_en = path.join(data_path, "en.model")
     model_es = path.join(data_path, "es.model")
 
@@ -75,14 +80,14 @@ dataset = load_dataset("para_crawl", "enes", split="train")
 
 
 class LanguageModeler(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, context_size):
+    def __init__(self, vocab_size: int, embedding_dim: int, context_size: int) -> None:
         super(LanguageModeler, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
         hidden_size = 128
         self.linear1 = nn.Linear(context_size * embedding_dim, hidden_size)
         self.linear2 = nn.Linear(hidden_size, vocab_size)
 
-    def forward(self, inputs):
+    def forward(self, inputs: Tensor) -> Tensor:
         embeds = self.embeddings(inputs).view((1, -1))
         out = F.relu(self.linear1(embeds))
         out = self.linear2(out)
@@ -101,14 +106,14 @@ else:
 
 criterion = nn.NLLLoss()
 model = LanguageModeler(
-    hyper_parameters["vocab_size"],
-    hyper_parameters["embedding_dim"],
-    hyper_parameters["context_size"],
+    p.vocab_size,
+    p.embedding_dim,
+    p.context_size,
 ).to(device)
-optimizer = optim.SGD(model.parameters(), lr=hyper_parameters["learning_rate"])
+optimizer = optim.SGD(model.parameters(), lr=p.learning_rate)
 
 
-def print_embedding(tokens, text):
+def print_embedding(tokens: SentencePieceProcessor, text: str) -> None:
     example_ids = tokens.encode_as_ids(text)
 
     print("Example embedding before training:")
@@ -122,7 +127,7 @@ def print_embedding(tokens, text):
 print_embedding(tokens_en, "The quick brown fox.")
 
 
-def artifact_path(postfix):
+def artifact_path(postfix: str) -> str:
     return path.join(data_path, "embeddings", f"{language}-{param_hash}-{postfix}")
 
 
@@ -140,17 +145,17 @@ class Trainer:
 
     losses: list[float] = []
 
-    def __init__(self):
+    def __init__(self) -> None:
         signal.signal(signal.SIGINT, self.handle_signal)
 
-    def handle_signal(self, *args):
+    def handle_signal(self, *args: Any) -> None:
         self.sigint_sent = True
 
-    def save_hyperparameters(self):
+    def save_hyperparameters(self) -> None:
         if not path.exists(self.parameters_path):
-            save_json(self.parameters_path, hyper_parameters)
+            save_json(self.parameters_path, p)
 
-    def load_saved_model(self):
+    def load_saved_model(self) -> None:
         if path.exists(self.model_path):
             print("Loading a saved model")
             model.load_state_dict(torch.load(self.model_path))
@@ -161,7 +166,7 @@ class Trainer:
                 self.losses = json.load(f)
                 self.epoch = len(self.losses)
 
-    def train(self):
+    def train(self) -> None:
         self.save_hyperparameters()
         self.load_saved_model()
 
@@ -179,7 +184,7 @@ class Trainer:
 
         print("Training complete, losses:", self.losses)
 
-    def data(self):
+    def data(self) -> list[dict[str, str]]:
         """
         Lazily loads the data. This method can take some time to run.
         """
@@ -191,9 +196,9 @@ class Trainer:
             # with open(path.join(data_path, "en.small.txt")) as f:
             #     self.__data = [{"en": line} for line in f.readlines()]
 
-        return self.__data
+        return cast(Any, self.__data)
 
-    def save_embeddings(self):
+    def save_embeddings(self) -> None:
         torch.save(
             model.state_dict(),
             self.model_path,
@@ -204,26 +209,27 @@ class Trainer:
         )
         save_json(self.loss_path, self.losses)
 
-    def graph_loss(self):
+    def graph_loss(self) -> None:
         figure, axes = plt.subplots()
 
         axes.set_title("Word Embedding Training")
-        axes.plot(torch.arange(0, len(self.losses), 1), self.losses)
+        data: Any = torch.arange(0, len(self.losses), 1)
+        axes.plot(data, self.losses)
         axes.set_xlabel("Epoch")
         axes.set_ylabel("Loss")
         plt.savefig(self.graph_path, dpi=150)
-        figure.close()
+        plt.close(figure)
 
-    def gracefully_exit(self):
+    def gracefully_exit(self) -> None:
         print("\nRestarting this script will pick up the training where it left off.")
         imgcat(open(self.graph_path))
         sys.exit(0)
 
-    def train_one_epoch(self):
+    def train_one_epoch(self) -> None:
         total_loss = 0.0
 
-        sentences_per_epoch = hyper_parameters["sentences_per_epoch"]
-        context_size = hyper_parameters["context_size"]
+        sentences_per_epoch = p.sentences_per_epoch
+        context_size = p.context_size
         data = self.data()
         start_time = time.time()
 

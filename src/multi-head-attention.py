@@ -5,7 +5,6 @@ https://nn.labml.ai/transformers/mha.html
 """
 
 import math
-from typing import Optional, List
 
 import torch
 from torch import nn
@@ -34,7 +33,7 @@ class PrepareForMultiHeadAttention(nn.Module):
         self.heads = heads
         self.d_k = d_k
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         head_shape = x.shape[:-1]
         x = self.linear(x)
         x = x.view(*head_shape, self.heads, self.d_k)
@@ -65,7 +64,7 @@ class MultiHeadAttention(nn.Module):
         self.scale = 1 / math.sqrt(self.d_k)
         self.attn = None
 
-    def get_scores(self, query: torch.Tensor, key: torch.Tensor):
+    def get_scores(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         """
         Calculate scores between queries and keys
         """

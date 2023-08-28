@@ -1,6 +1,7 @@
 # Global mypy options:
 [tool.mypy]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/stubs"
+disallow_untyped_defs = true
 
 # Per-module mypy configs:
 [[tool.mypy.overrides]]

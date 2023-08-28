@@ -5,11 +5,13 @@ https://towardsdatascience.com/build-your-own-transformer-from-scratch-using-pyt
 import math
 import torch
 from torch import nn, optim, Tensor
-from typing import Optional
+from typing import Optional, cast
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, device=None):
+    def __init__(
+        self, d_model: int, num_heads: int, device: Optional[torch.device] = None
+    ) -> None:
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -24,7 +26,7 @@ class MultiHeadAttention(nn.Module):
 
     def scaled_dot_product_attention(
         self, Q: Tensor, K: Tensor, V: Tensor, mask: Optional[Tensor] = None
-    ):
+    ) -> Tensor:
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
         if mask is not None:
             attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
@@ -32,15 +34,17 @@ class MultiHeadAttention(nn.Module):
         output = torch.matmul(attn_probs, V)
         return output
 
-    def split_heads(self, x: Tensor):
+    def split_heads(self, x: Tensor) -> Tensor:
         batch_size, seq_length, d_model = x.size()
         return x.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
 
-    def combine_heads(self, x: Tensor):
+    def combine_heads(self, x: Tensor) -> Tensor:
         batch_size, _, seq_length, d_k = x.size()
         return x.transpose(1, 2).contiguous().view(batch_size, seq_length, self.d_model)
 
-    def forward(self, Q: Tensor, K: Tensor, V: Tensor, mask: Optional[Tensor] = None):
+    def forward(
+        self, Q: Tensor, K: Tensor, V: Tensor, mask: Optional[Tensor] = None
+    ) -> Tensor:
         Q = self.split_heads(self.W_q(Q))
         K = self.split_heads(self.W_k(K))
         V = self.split_heads(self.W_v(V))
@@ -51,18 +55,22 @@ class MultiHeadAttention(nn.Module):
 
 
 class PositionWiseFeedForward(nn.Module):
-    def __init__(self, d_model: int, d_ff: int, device=None):
+    def __init__(
+        self, d_model: int, d_ff: int, device: Optional[torch.device] = None
+    ) -> None:
         super(PositionWiseFeedForward, self).__init__()
         self.fc1 = nn.Linear(d_model, d_ff, device=device)
         self.fc2 = nn.Linear(d_ff, d_model, device=device)
         self.relu = nn.ReLU()
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor) -> Tensor:
         return self.fc2(self.relu(self.fc1(x)))
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_seq_length: int, device=None):
+    def __init__(
+        self, d_model: int, max_seq_length: int, device: Optional[torch.device] = None
+    ) -> None:
         super(PositionalEncoding, self).__init__()
 
         pe = torch.zeros(max_seq_length, d_model, device=device)
@@ -76,12 +84,20 @@ class PositionalEncoding(nn.Module):
 
         self.register_buffer("pe", pe.unsqueeze(0))
 
-    def forward(self, x):
-        return x + self.pe[:, : x.size(1)]
+    def forward(self, x: Tensor) -> Tensor:
+        pe = cast(Tensor, self.pe)
+        return x + pe[:, : x.size(1)]
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout, device=None):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        dropout: float,
+        device: Optional[torch.device] = None,
+    ) -> None:
         super(EncoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads, device=device)
         self.feed_forward = PositionWiseFeedForward(d_model, d_ff, device=device)
@@ -89,7 +105,7 @@ class EncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model, device=device)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask):
+    def forward(self, x: Tensor, mask: Tensor) -> Tensor:
         attn_output = self.self_attn(x, x, x, mask)
         x = self.norm1(x + self.dropout(attn_output))
         ff_output = self.feed_forward(x)
@@ -98,7 +114,7 @@ class EncoderLayer(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super(DecoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads)
         self.cross_attn = MultiHeadAttention(d_model, num_heads)
@@ -108,7 +124,9 @@ class DecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, enc_output, src_mask, tgt_mask):
+    def forward(
+        self, x: Tensor, enc_output: Tensor, src_mask: Tensor, tgt_mask: Tensor
+    ) -> Tensor:
         attn_output = self.self_attn(x, x, x, tgt_mask)
         x = self.norm1(x + self.dropout(attn_output))
         attn_output = self.cross_attn(x, enc_output, enc_output, src_mask)
@@ -121,16 +139,16 @@ class DecoderLayer(nn.Module):
 class Transformer(nn.Module):
     def __init__(
         self,
-        src_vocab_size,
-        tgt_vocab_size,
-        d_model,
-        num_heads,
-        num_layers,
-        d_ff,
-        max_seq_length,
-        dropout,
-        device=None,
-    ):
+        src_vocab_size: int,
+        tgt_vocab_size: int,
+        d_model: int,
+        num_heads: int,
+        num_layers: int,
+        d_ff: int,
+        max_seq_length: int,
+        dropout: float,
+        device: Optional[torch.device] = None,
+    ) -> None:
         super(Transformer, self).__init__()
         self.encoder_embedding = nn.Embedding(src_vocab_size, d_model, device=device)
         self.decoder_embedding = nn.Embedding(tgt_vocab_size, d_model, device=device)
@@ -149,7 +167,9 @@ class Transformer(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.device = device
 
-    def generate_mask(self, source, target, device=None):
+    def generate_mask(
+        self, source: Tensor, target: Tensor, device: Optional[torch.device] = None
+    ) -> tuple[Tensor, Tensor]:
         src_mask = (source != 0).unsqueeze(1).unsqueeze(2)
         tgt_mask = (target != 0).unsqueeze(1).unsqueeze(3)
         seq_length = target.size(1)
@@ -162,7 +182,7 @@ class Transformer(nn.Module):
         tgt_mask = tgt_mask & nopeak_mask
         return src_mask, tgt_mask
 
-    def forward(self, src, tgt):
+    def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
         src_mask, tgt_mask = self.generate_mask(src, tgt, device=self.device)
         src_embedded = self.dropout(
             self.positional_encoding(self.encoder_embedding(src))

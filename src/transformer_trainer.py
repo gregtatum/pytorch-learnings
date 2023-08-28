@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from os import path
-from typing import List, TypedDict
+from typing import Callable, List, TypedDict
 from numpy import pad
 from transformer import Transformer
 from utils import get_device
-from utils.trainer_manager import TrainerManager
+from utils.trainer_manager import ArtifactPathFn, TrainerManager
 import torch
 from torch import nn, optim, Tensor
 from utils.data_loader import load_test_data
@@ -18,7 +18,7 @@ device = get_device()
 
 
 class HyperParameters:
-    def __init__(self):
+    def __init__(self) -> None:
         self.source_language = "en"
         self.target_language = "es"
         self.source_vocab_size = 5000
@@ -68,7 +68,7 @@ tokens, data = load_test_data(p.source_language, p.target_language, small=True)
 # TODO - Differentiate between batch and epoch.
 
 
-def process_batch_data(data_slice: slice):
+def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
     """
     Get a batch of data to process.
     """
@@ -76,7 +76,7 @@ def process_batch_data(data_slice: slice):
     data_batch = data[data_slice]
 
     # Ensures the sentence is zero padded to the correct tensor size.
-    def zero_pad(list):
+    def zero_pad(list: list[int]) -> list[int]:
         if len(list) > p.max_seq_length:
             list = list[: p.max_seq_length]
         while len(list) < p.max_seq_length:
@@ -98,7 +98,7 @@ def process_batch_data(data_slice: slice):
     )
 
 
-def save_model(artifact_path):
+def save_model(artifact_path: ArtifactPathFn) -> None:
     torch.save(
         model.state_dict(),
         artifact_path("model.pt"),
@@ -109,7 +109,7 @@ def save_model(artifact_path):
     )
 
 
-def load_model(artifact_path):
+def load_model(artifact_path: ArtifactPathFn) -> None:
     if path.exists(artifact_path("model.pt")):
         print("Loading a saved model")
         model.load_state_dict(torch.load(artifact_path("model.pt")))

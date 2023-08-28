@@ -1,5 +1,5 @@
 import signal
-from typing import Any, List, cast
+from typing import Any, Callable, List, Optional, cast
 
 from torch import nn
 from os import path, mkdir
@@ -14,6 +14,8 @@ import json
 import math
 
 data_path = path.abspath(path.join(path.dirname(__file__), "../../data"))
+
+ArtifactPathFn = Callable[[str], str]
 
 
 class TrainerManager:
@@ -46,14 +48,14 @@ class TrainerManager:
         if not path.exists(output_dir):
             mkdir(output_dir)
 
-    def artifact_path(self, postfix) -> str:
+    def artifact_path(self, postfix: str) -> str:
         return path.join(data_path, self.name, f"{self.param_hash}-{postfix}")
 
-    def handle_signal(self, *args):
+    def handle_signal(self, *args: Any) -> None:
         print("\nFinishing current batch, then exiting.")
         self.sigint_sent = True
 
-    def load_losses(self, num_batches: int):
+    def load_losses(self, num_batches: int) -> None:
         if path.exists(self.loss_path):
             print("Loading loss history")
             with open(self.loss_path) as f:
@@ -61,7 +63,7 @@ class TrainerManager:
                 self.epoch = int(len(self.losses) / num_batches)
                 self.batch = int(len(self.losses) % num_batches)
 
-    def graph_loss(self, num_batches: int):
+    def graph_loss(self, num_batches: int) -> None:
         figure, axes = plt.subplots()
 
         axes.set_title(f'"{self.name}" Training')
@@ -77,26 +79,26 @@ class TrainerManager:
         plt.savefig(self.graph_path, dpi=150)
         plt.close(figure)
 
-    def gracefully_exit(self):
+    def gracefully_exit(self) -> None:
         imgcat(open(self.graph_path, "r"))
         sys.exit(0)
 
-    def save_hyperparameters(self):
+    def save_hyperparameters(self) -> None:
         if not path.exists(self.parameters_path):
             save_json(self.parameters_path, self.hyper_parameters)
 
-    def save_losses(self):
+    def save_losses(self) -> None:
         save_json(self.loss_path, self.losses)
 
     def train(
         self,
-        train_step,
-        data_size=0,
-        batch_size=0,
-        num_epochs=0,
-        save_model=None,
-        load_model=None,
-    ):
+        train_step: Callable[[slice], float],
+        data_size: int = 0,
+        batch_size: int = 0,
+        num_epochs: int = 0,
+        save_model: Optional[Callable[[ArtifactPathFn], None]] = None,
+        load_model: Optional[Callable[[ArtifactPathFn], None]] = None,
+    ) -> None:
         if batch_size == 0:
             raise Exception("A batch_size must be provided.")
         if num_epochs == 0:

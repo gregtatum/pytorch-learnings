@@ -3,7 +3,7 @@ import torch
 
 # fmt: off
 
-def test_tensor_size():
+def test_tensor_size() -> None:
     x = torch.tensor([
         [0, 1, 2],
         [3, 4, 5]
@@ -11,7 +11,7 @@ def test_tensor_size():
     assert x.size() == torch.Size([2, 3])
 
 
-def test_tensor_view():
+def test_tensor_view() -> None:
     x = torch.tensor([
         [0, 1, 2],
         [3, 4, 5]
@@ -28,7 +28,7 @@ def test_tensor_view():
     assert x.view(torch.Size([3, 2])).size() == torch.Size([3, 2])
 
 
-def test_tensor_transpose():
+def test_tensor_transpose() -> None:
     x = torch.tensor([
         [0, 1, 2],
         [3, 4, 5]
@@ -50,7 +50,7 @@ def test_tensor_transpose():
         ])
     )
 
-def test_arange():
+def test_arange() -> None:
     assert torch.allclose(
         torch.tensor([2, 4, 6]),
         torch.arange(2, 8, 2),
@@ -61,7 +61,7 @@ def test_arange():
         torch.arange(0, 10, 1),
     )
 
-def test_zeros():
+def test_zeros() -> None:
     assert torch.allclose(
         torch.zeros(3),
         torch.tensor([0., 0., 0.])
@@ -75,7 +75,7 @@ def test_zeros():
         ])
     )
 
-def test_unsqueeze():
+def test_unsqueeze() -> None:
     x = torch.tensor([1, 2, 3, 4])
     assert torch.allclose(
         x.unsqueeze(0),
@@ -91,7 +91,7 @@ def test_unsqueeze():
         ])
     )
 
-def test_slicing():
+def test_slicing() -> None:
     assert torch.allclose(
         torch.tensor([0, 1, 2, 3, 4, 5, 6])[:],
         torch.tensor([0, 1, 2, 3, 4, 5, 6])

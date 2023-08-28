@@ -14,14 +14,14 @@ DIM_OUT = 10
 
 
 class TinyModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super(TinyModel, self).__init__()
 
         self.layer1 = torch.nn.Linear(DIM_IN, HIDDEN_SIZE)
         self.relu = torch.nn.ReLU()
         self.layer2 = torch.nn.Linear(100, 10)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.layer1(x)
         x = self.relu(x)
         x = self.layer2(x)
@@ -36,7 +36,7 @@ prediction = model(some_input)
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 
 
-def output_weights():
+def output_weights() -> None:
     print(
         "   Layer 2 weights (slice):", model.layer2.weight[0][0:4]
     )  # Just a small slice

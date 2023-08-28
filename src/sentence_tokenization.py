@@ -17,27 +17,29 @@ https://github.com/google/sentencepiece/tree/master/python
 """
 
 from typing import Optional, TypedDict
-from datasets import load_dataset_builder, load_dataset
+from datasets import load_dataset
 import sentencepiece as spm
 from os import path
 
-ParaCrawlDataset = TypedDict("ParaCrawlDataset", {"translations": list[dict[str, str]]})
+ParaCrawlDataset = TypedDict("ParaCrawlDataset", {"translation": list[dict[str, str]]})
 
 dataset: Optional[ParaCrawlDataset] = None  # Lazily initialized
 
 
-def write_file(output_file, lang):
+def get_dataset() -> ParaCrawlDataset:
     global dataset
-    if path.exists(output_file):
-        print(f"The text file '{output_file}' already exists.")
-    else:
-        if not dataset:
-            print("Loading data set")
-            dataset = load_dataset("para_crawl", "enes", split="train").shuffle()
+    if not dataset:
+        dataset = load_dataset("para_crawl", "enes", split="train").shuffle()
+    return dataset
 
-        print(f"Writing out file '{output_file}'.")
-        with open(output_file, "w", encoding="utf-8") as f:
-            for row in dataset["translation"]:
+
+def write_file(output_path: str, lang: str) -> None:
+    if path.exists(output_path):
+        print(f"The text file '{output_path}' already exists.")
+    else:
+        print(f"Writing out file '{output_path}'.")
+        with open(output_path, "w", encoding="utf-8") as f:
+            for row in get_dataset()["translation"]:
                 f.write(row[lang] + "\n")
 
 
@@ -51,7 +53,7 @@ write_file(text_en, "en")
 write_file(text_es, "es")
 
 
-def run_sentence_piece(lang):
+def run_sentence_piece(lang: str) -> None:
     model_path = path.join(data_path, f"{lang}.model")
     if path.exists(model_path):
         print(f"The model file already exists: {model_path}")
@@ -69,7 +71,7 @@ run_sentence_piece("en")
 run_sentence_piece("es")
 
 
-def output_sentence_piece(lang):
+def output_sentence_piece(lang: str) -> None:
     model_path = path.join(data_path, f"{lang}.model")
     text_path = path.join(data_path, f"{lang}.txt")
     sp = spm.SentencePieceProcessor()
@@ -94,7 +96,7 @@ output_sentence_piece("en")
 output_sentence_piece("es")
 
 
-def max_length(lang):
+def max_length(lang: str) -> int:
     model_path = path.join(data_path, f"{lang}.model")
     text_path = path.join(data_path, f"{lang}.txt")
     sp = spm.SentencePieceProcessor()

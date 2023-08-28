@@ -2,7 +2,7 @@ from os import path
 from typing import Dict, List, Tuple
 
 from sentencepiece import SentencePieceProcessor
-from datasets import load_dataset_builder, load_dataset
+from datasets import load_dataset
 
 data_path = path.abspath(path.join(path.dirname(__file__), "../../data"))
 
@@ -35,7 +35,9 @@ def __load_tokenizers(source_language: str, target_language: str) -> Tokens:
     return Tokens(tokens_source, tokens_target)
 
 
-def __load_data(source_language: str, target_language: str, small=False) -> List[Dict]:
+def __load_data(
+    source_language: str, target_language: str, small: bool = False
+) -> list[dict]:
     if small:
         # Use a smaller text source for faster iterations.
         source_txt = path.join(data_path, source_language + ".small.txt")
@@ -76,7 +78,7 @@ def __load_data(source_language: str, target_language: str, small=False) -> List
 
 
 def load_test_data(
-    source_language: str, target_language: str, small=False
+    source_language: str, target_language: str, small: bool = False
 ) -> Tuple[Tokens, List[Dict]]:
     tokens = __load_tokenizers(source_language, target_language)
     data = __load_data(source_language, target_language, small)

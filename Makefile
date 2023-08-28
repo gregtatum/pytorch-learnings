@@ -13,7 +13,7 @@ test-py:
 	poetry run pytest -p no:warnings
 
 test-types:
-	poetry run mypy src
+	poetry run mypy src tests stubs
 
 lint: lint-format lint-style
 
