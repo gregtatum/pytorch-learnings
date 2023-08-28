@@ -6,11 +6,6 @@ https://pytorch.org/tutorials/beginner/introyt/autogradyt_tutorial.html
 """
 
 import torch
-from utils import output_plot
-
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import math
 
 BATCH_SIZE = 16
 DIM_IN = 1000

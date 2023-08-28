@@ -5,11 +5,11 @@ This is an annotated version of the code in:
 https://pytorch.org/tutorials/beginner/introyt/autogradyt_tutorial.html
 """
 
+from typing import Sequence, cast
 import torch
 from utils import output_plot
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import math
 
 # Create a linear vector with 25 elements, ranged from [0, 2π].
@@ -23,7 +23,10 @@ print("a", a)
 #        requires_grad=True)
 
 b = torch.sin(a)
-plt.plot(a.detach(), b.detach())
+
+a_plot = cast(Sequence[float], a.detach())
+b_plot = cast(Sequence[float], b.detach())
+plt.plot(a_plot, b_plot)
 
 output_plot("./plots/autograd-01.png")
 
@@ -49,5 +52,10 @@ print("out", out)
 # Run the gradient function to compute the gradients in all the functions.
 out.backward()
 print("a.grad", a.grad)
-plt.plot(a.detach(), a.grad.detach())
+
+if a.grad:
+    a_plot = cast(Sequence[float], a.detach())
+    b_plot = cast(Sequence[float], a.grad.detach())
+    plt.plot(a_plot, b_plot)
+
 output_plot("./plots/autograd-02.png")

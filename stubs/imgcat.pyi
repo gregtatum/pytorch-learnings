@@ -1,6 +1,5 @@
 from io import TextIOWrapper
 
-
 def imgcat(
     data: str | TextIOWrapper,
     filename=None,
@@ -9,5 +8,4 @@ def imgcat(
     preserve_aspect_ratio=True,
     pixels_per_line=24,
     fp=None,
-):
-    ...
+): ...

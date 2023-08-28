@@ -6,6 +6,7 @@ Perform a word embedding, run src/sentence_tokenization.py first.
 https://pytorch.org/tutorials/beginner/nlp/word_embeddings_tutorial.html
 """
 
+from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,18 +19,17 @@ import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import json
-import random
 from imgcat import imgcat
 import time
 from utils import naive_hash
 
 torch.manual_seed(1234)
 data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
-artifact_path = path.join(data_path, "embeddings")
 language = "en"
 
-if not path.exists(artifact_path):
-    mkdir(artifact_path)
+# Create the artifact directory.
+if not path.exists(path.join(data_path, "embeddings")):
+    mkdir(path.join(data_path, "embeddings"))
 
 
 def save_json(path_str: str, out):
@@ -130,7 +130,7 @@ def artifact_path(postfix):
 class Trainer:
     epoch = 0
     sigint_sent = False
-    __data = None
+    __data: Optional[dict[str, str]] = None
 
     parameters_path = artifact_path("hyperparameters.json")
     loss_path = artifact_path("loss.json")
@@ -138,7 +138,7 @@ class Trainer:
     model_path = artifact_path("model.pt")
     graph_path = artifact_path("graph.png")
 
-    losses = []
+    losses: list[float] = []
 
     def __init__(self):
         signal.signal(signal.SIGINT, self.handle_signal)

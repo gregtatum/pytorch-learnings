@@ -9,6 +9,7 @@ dataset.
 It is based off of: https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html
 """
 
+from typing import Any, cast
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -84,7 +85,8 @@ def train(
     (fed to it in batches), and backpropagates the prediction error to adjust the model’s
     parameters.
     """
-    size = len(dataloader.dataset)
+    dataset: Any = dataloader.dataset  # Suppress a type error.
+    size = len(dataset)
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -107,14 +109,15 @@ def test(dataloader: DataLoader, model: nn.Module, device: str, loss_fn: nn.Modu
     """
     Check the model performance against the
     """
-    size = len(dataloader.dataset)
+    dataset: Any = dataloader.dataset  # Suppress a type error.
+    size = len(dataset)
     num_batches = len(dataloader)
 
     print(f"Test size: {size}")
     print(f"Test number of batches: {size}")
 
     model.eval()
-    test_loss, correct = 0, 0
+    test_loss, correct = 0.0, 0.0
     with torch.no_grad():
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)

@@ -10,8 +10,6 @@ from typing import Optional, List
 import torch
 from torch import nn
 
-from labml import tracker
-
 
 class PrepareForMultiHeadAttention(nn.Module):
     """
@@ -64,7 +62,7 @@ class MultiHeadAttention(nn.Module):
         self.output = nn.Linear(d_model, d_model)
 
         self.dropout = nn.Dropout(dropout_prob)
-        self.scale = 1 / math.sqrt(self._dk)
+        self.scale = 1 / math.sqrt(self.d_k)
         self.attn = None
 
     def get_scores(self, query: torch.Tensor, key: torch.Tensor):

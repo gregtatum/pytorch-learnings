@@ -16,11 +16,14 @@ https://github.com/google/sentencepiece
 https://github.com/google/sentencepiece/tree/master/python
 """
 
+from typing import Optional, TypedDict
 from datasets import load_dataset_builder, load_dataset
 import sentencepiece as spm
 from os import path
 
-dataset = None  # Lazily initialized
+ParaCrawlDataset = TypedDict("ParaCrawlDataset", {"translations": list[dict[str, str]]})
+
+dataset: Optional[ParaCrawlDataset] = None  # Lazily initialized
 
 
 def write_file(output_file, lang):
