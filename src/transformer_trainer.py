@@ -65,7 +65,13 @@ optimizer = optim.Adam(
 
 tokens, data = load_test_data(p.source_language, p.target_language, small=True)
 
-# TODO - Differentiate between batch and epoch.
+# Get the tokens for the "begin of a sentence" (bos) and "end of sentence" eos
+source_eos = tokens.source.piece_to_id("</s>")
+target_bos = tokens.target.piece_to_id("<s>")
+target_eos = tokens.target.piece_to_id("</s>")
+
+
+# TODO - This could be made faster if this processing wasn't done on the fly.
 
 
 def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
@@ -75,23 +81,34 @@ def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
 
     data_batch = data[data_slice]
 
-    # Ensures the sentence is zero padded to the correct tensor size.
     def zero_pad(list: list[int]) -> list[int]:
+        """Ensures the sentence is zero padded to the correct tensor size."""
         if len(list) > p.max_seq_length:
             list = list[: p.max_seq_length]
         while len(list) < p.max_seq_length:
             list.append(0)
         return list
 
+    def prep_source(list: list[int]) -> list[int]:
+        """Source sentences only need the eos."""
+        list.append(source_eos)
+        return zero_pad(list)
+
+    def prep_target(list: list[int]) -> list[int]:
+        """Target sentences need both the bos eos."""
+        list.insert(0, target_bos)
+        list.append(target_eos)
+        return zero_pad(list)
+
     return torch.tensor(
         [
-            zero_pad(tokens.source.encode_as_ids(sentence[p.source_language]))
+            prep_source(tokens.source.encode_as_ids(sentence[p.source_language]))
             for sentence in data_batch
         ],
         device=device,
     ), torch.tensor(
         [
-            zero_pad(tokens.target.encode_as_ids(sentence[p.target_language]))
+            prep_target(tokens.target.encode_as_ids(sentence[p.target_language]))
             for sentence in data_batch
         ],
         device=device,
