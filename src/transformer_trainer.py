@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from os import path
 from typing import List, TypedDict
 from numpy import pad
 from transformer import Transformer
@@ -67,14 +68,12 @@ tokens, data = load_test_data(p.source_language, p.target_language, small=True)
 # TODO - Differentiate between batch and epoch.
 
 
-def process_batch_data(epoch: int):
+def process_batch_data(data_slice: slice):
     """
     Get a batch of data to process.
     """
-    data_index = (p.batch_size * epoch) % len(data)
 
-    # TODO - Deal with batch size not being divisible by the length of the data.
-    data_batch = data[data_index : data_index + p.batch_size]
+    data_batch = data[data_slice]
 
     # Ensures the sentence is zero padded to the correct tensor size.
     def zero_pad(list):
@@ -99,11 +98,32 @@ def process_batch_data(epoch: int):
     )
 
 
-def train_step(epoch: int) -> float:
+def save_model(artifact_path):
+    torch.save(
+        model.state_dict(),
+        artifact_path("model.pt"),
+    )
+    torch.save(
+        optimizer.state_dict(),
+        artifact_path("optimizer.pt"),
+    )
+
+
+def load_model(artifact_path):
+    if path.exists(artifact_path("model.pt")):
+        print("Loading a saved model")
+        model.load_state_dict(torch.load(artifact_path("model.pt")))
+
+    if path.exists(artifact_path("optimizer.pt")):
+        print("Loading a saved optimizer")
+        optimizer.load_state_dict(torch.load(artifact_path("optimizer.pt")))
+
+
+def train_step(data_slice: slice) -> float:
     # Zero out the gradients for this run.
     optimizer.zero_grad()
 
-    source_data, target_data = process_batch_data(epoch)
+    source_data, target_data = process_batch_data(data_slice)
 
     output = model(source_data, target_data[:, :-1])
 
@@ -119,4 +139,12 @@ def train_step(epoch: int) -> float:
 
 
 manager = TrainerManager("transformer", model, p)
-manager.train(train_step, batch_size=p.batch_size, num_epochs=100)
+manager.train(
+    train_step,
+    #
+    batch_size=p.batch_size,
+    num_epochs=100,
+    data_size=len(data),
+    save_model=save_model,
+    load_model=load_model,
+)
