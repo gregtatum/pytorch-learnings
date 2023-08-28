@@ -2,7 +2,7 @@
 from os import path
 from typing import Callable, List, TypedDict
 from numpy import pad
-from transformer import Transformer
+from utils.transformer import Transformer
 from utils import get_device
 from utils.trainer_manager import ArtifactPathFn, TrainerManager
 import torch
