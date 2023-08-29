@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from os import path
+from typing import Any
 from transformer.model import Transformer
 from transformer.parameters import HyperParameters
 from transformer.utils import SentenceProcessor
@@ -8,13 +9,36 @@ from transformer.trainer_manager import ArtifactPathFn, TrainerManager
 import torch
 from torch import nn, optim, Tensor
 from utils.data_loader import load_data, load_tokenizers
+import argparse
 
 """
 Train a transformer model.
 """
 
+
+def process_args() -> Any:
+    parser = argparse.ArgumentParser(
+        description="Train a transformer model for translations."
+    )
+    parser.add_argument(
+        "--source", type=str, help='The source language, e.g. "en"', required=True
+    )
+    parser.add_argument(
+        "--target", type=str, help='The target language, e.g. "es"', required=True
+    )
+    parser.add_argument(
+        "--small",
+        help="Use a small test data set which is faster to load",
+        action="store_true",
+    )
+
+    return parser.parse_args()
+
+
+args = process_args()
+
 device = get_device()
-p = HyperParameters()
+p = HyperParameters(args.source, args.target)
 model = Transformer(
     p.source_vocab_size,
     p.target_vocab_size,

@@ -19,7 +19,7 @@ def process_args() -> Any:
         "--source", type=str, help='The source language, e.g. "en"', required=True
     )
     parser.add_argument(
-        "--target", type=str, help='The target language, e.g. "en"', required=True
+        "--target", type=str, help='The target language, e.g. "es"', required=True
     )
     parser.add_argument(
         "--sentence", type=str, help="The sentence to translate", required=True
@@ -30,7 +30,7 @@ def process_args() -> Any:
 
 args = process_args()
 device = get_device()
-p = HyperParameters()
+p = HyperParameters(args.source, args.target)
 model = Transformer(
     p.source_vocab_size,
     p.target_vocab_size,

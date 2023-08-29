@@ -1,7 +1,7 @@
 class HyperParameters:
-    def __init__(self) -> None:
-        self.source_language = "en"
-        self.target_language = "es"
+    def __init__(self, source_language: str, target_language: str) -> None:
+        self.source_language = source_language
+        self.target_language = target_language
         self.source_vocab_size = 5000
         self.target_vocab_size = 5000
         self.batch_size = 256

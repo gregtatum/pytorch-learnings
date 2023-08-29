@@ -7,13 +7,13 @@ import argparse
 from os import path
 from sentencepiece import SentencePieceProcessor
 import torch.nn.functional as F
-from transformer.utils import load_tokenizers
+
+from word_embedding import load_tokenizers
 
 data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
 artifact_path = path.join(data_path, "embeddings")
 
-
-tokens_en, tokens_es = load_tokenizers("en", "es")
+tokens_en, tokens_es = load_tokenizers()
 
 
 def process_args() -> tuple[str, str]:
