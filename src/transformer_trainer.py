@@ -1,42 +1,20 @@
 #!/usr/bin/env python3
 from os import path
-from typing import Callable, List, TypedDict
-from numpy import pad
-from utils.transformer import Transformer
+from transformer.model import Transformer
+from transformer.parameters import HyperParameters
+from transformer.utils import SentenceProcessor
 from utils import get_device
-from utils.trainer_manager import ArtifactPathFn, TrainerManager
+from transformer.trainer_manager import ArtifactPathFn, TrainerManager
 import torch
 from torch import nn, optim, Tensor
-from utils.data_loader import load_test_data
-import torch.nn.functional as F
+from utils.data_loader import load_data, load_tokenizers
 
 """
 Train a transformer model.
 """
 
 device = get_device()
-
-
-class HyperParameters:
-    def __init__(self) -> None:
-        self.source_language = "en"
-        self.target_language = "es"
-        self.source_vocab_size = 5000
-        self.target_vocab_size = 5000
-        self.batch_size = 256
-        self.d_model = 512  # d_k := 64
-        self.num_heads = 8
-        self.num_layers = 6
-        self.d_ff = 2048
-        self.max_seq_length = 100
-        self.dropout = 0.1
-        self.learning_rate = 0.0001
-        self.learning_betas = (0.9, 0.98)
-        self.learning_epsilon = 1e-9
-
-
 p = HyperParameters()
-
 model = Transformer(
     p.source_vocab_size,
     p.target_vocab_size,
@@ -63,15 +41,15 @@ optimizer = optim.Adam(
     eps=p.learning_epsilon,
 )
 
-tokens, data = load_test_data(p.source_language, p.target_language, small=True)
+tokens = load_tokenizers(p.source_language, p.target_language)
+data = load_data(p.source_language, p.target_language, small=True)
 
 # Get the tokens for the "begin of a sentence" (bos) and "end of sentence" eos
-source_eos = tokens.source.piece_to_id("</s>")
-target_bos = tokens.target.piece_to_id("<s>")
-target_eos = tokens.target.piece_to_id("</s>")
 
 
 # TODO - This could be made faster if this processing wasn't done on the fly.
+
+sentence_processor = SentenceProcessor(tokens, p.max_seq_length)
 
 
 def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
@@ -81,34 +59,17 @@ def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
 
     data_batch = data[data_slice]
 
-    def zero_pad(list: list[int]) -> list[int]:
-        """Ensures the sentence is zero padded to the correct tensor size."""
-        if len(list) > p.max_seq_length:
-            list = list[: p.max_seq_length]
-        while len(list) < p.max_seq_length:
-            list.append(0)
-        return list
-
-    def prep_source(list: list[int]) -> list[int]:
-        """Source sentences only need the eos."""
-        list.append(source_eos)
-        return zero_pad(list)
-
-    def prep_target(list: list[int]) -> list[int]:
-        """Target sentences need both the bos eos."""
-        list.insert(0, target_bos)
-        list.append(target_eos)
-        return zero_pad(list)
-
     return torch.tensor(
         [
-            prep_source(tokens.source.encode_as_ids(sentence[p.source_language]))
+            sentence_processor.prep_source_sentence(sentence[p.source_language])
             for sentence in data_batch
         ],
         device=device,
     ), torch.tensor(
         [
-            prep_target(tokens.target.encode_as_ids(sentence[p.target_language]))
+            sentence_processor.prep_training_target_sentence(
+                sentence[p.target_language]
+            )
             for sentence in data_batch
         ],
         device=device,

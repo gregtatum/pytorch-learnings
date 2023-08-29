@@ -170,8 +170,13 @@ class Transformer(nn.Module):
     def generate_mask(
         self, source: Tensor, target: Tensor, device: Optional[torch.device] = None
     ) -> tuple[Tensor, Tensor]:
+        # Consider `0` equal to a padding value that should be masked, the `!= 0` converts
+        # the tensor into one of `int` indexes, into boolean values.
         src_mask = (source != 0).unsqueeze(1).unsqueeze(2)
+        # e.g. src_mask.shape torch.Size([1, 1, 1, 100])
         tgt_mask = (target != 0).unsqueeze(1).unsqueeze(3)
+        # e.g. tgt_mask.shape torch.Size([1, 1, 100, 1])
+
         seq_length = target.size(1)
         nopeak_mask = (
             1

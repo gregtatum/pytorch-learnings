@@ -16,7 +16,7 @@ class Tokens:
         self.target = target
 
 
-def __load_tokenizers(source_language: str, target_language: str) -> Tokens:
+def load_tokenizers(source_language: str, target_language: str) -> Tokens:
     model_source = path.join(data_path, "vocab", source_language + ".model")
     model_target = path.join(data_path, "vocab", target_language + ".model")
 
@@ -35,7 +35,7 @@ def __load_tokenizers(source_language: str, target_language: str) -> Tokens:
     return Tokens(tokens_source, tokens_target)
 
 
-def __load_data(
+def load_data(
     source_language: str, target_language: str, small: bool = False
 ) -> list[dict]:
     if small:
@@ -68,18 +68,11 @@ def __load_data(
         ]
 
     # Load the dataset from para_crawl.
+    print("Dataset: creating")
     dataset = load_dataset(
         "para_crawl", source_language + target_language, split="train"
     )
-    print("Accessing data")
+    print("Dataset: accessing")
     data = dataset["translation"]
-    print("Data is loaded")
+    print("Dataset: loaded")
     return data
-
-
-def load_test_data(
-    source_language: str, target_language: str, small: bool = False
-) -> Tuple[Tokens, List[Dict]]:
-    tokens = __load_tokenizers(source_language, target_language)
-    data = __load_data(source_language, target_language, small)
-    return tokens, data

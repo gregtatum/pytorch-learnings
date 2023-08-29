@@ -7,30 +7,13 @@ import argparse
 from os import path
 from sentencepiece import SentencePieceProcessor
 import torch.nn.functional as F
+from transformer.utils import load_tokenizers
 
 data_path = path.abspath(path.join(path.dirname(__file__), "../data"))
 artifact_path = path.join(data_path, "embeddings")
 
 
-def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
-    model_en = path.join(data_path, "vocab", "en.model")
-    model_es = path.join(data_path, "vocab", "es.model")
-
-    if not path.exists(model_en):
-        raise Exception('No "en" model was found, run sentence_tokenization.py first.')
-    if not path.exists(model_es):
-        raise Exception('No "es" model was found, run sentence_tokenization.py first.')
-
-    tokens_en = SentencePieceProcessor()
-    tokens_es = SentencePieceProcessor()
-
-    tokens_en.load(model_en)
-    tokens_es.load(model_es)
-
-    return tokens_en, tokens_es
-
-
-tokens_en, tokens_es = load_tokenizers()
+tokens_en, tokens_es = load_tokenizers("en", "es")
 
 
 def process_args() -> tuple[str, str]:
