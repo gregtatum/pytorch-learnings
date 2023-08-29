@@ -1,5 +1,6 @@
 import signal
 from typing import Any, Callable, List, Optional, cast
+import mlflow
 
 from torch import nn
 from os import path, mkdir
@@ -48,8 +49,8 @@ class TrainerManager:
         if not path.exists(output_dir):
             mkdir(output_dir)
 
-    def artifact_path(self, postfix: str) -> str:
-        return path.join(data_path, self.name, f"{self.param_hash}-{postfix}")
+    def artifact_path(self, filename: str) -> str:
+        return path.join(data_path, self.name, self.param_hash, filename)
 
     def handle_signal(self, *args: Any) -> None:
         print("\nFinishing current batch, then exiting.")
@@ -93,6 +94,7 @@ class TrainerManager:
     def train(
         self,
         train_step: Callable[[slice], float],
+        name: str = "Training Run",
         data_size: int = 0,
         batch_size: int = 0,
         num_epochs: int = 0,
@@ -110,61 +112,74 @@ class TrainerManager:
         if not load_model:
             raise Exception("A load_model must be provided.")
 
-        num_batches = math.ceil(data_size / batch_size)
+        if not path.exists(self.artifact_path("")):
+            mkdir(self.artifact_path(""))
 
-        self.save_hyperparameters()
-        load_model(self.artifact_path)
-        self.load_losses(num_batches)
+        mlflow.set_experiment(f"{name} ({self.param_hash})")
 
-        print("Beginning training")
-        print(f" Hyperparameters: {self.parameters_path}")
-        print(f" Loss plot: {self.graph_path}")
-        print(f" Loss data: {self.loss_path}")
-        print(f" Model: {self.model_path}")
+        with mlflow.start_run():
+            mlflow.log_params(self.hyper_parameters.__dict__)
+            mlflow.log_artifacts(self.artifact_path(""))
+            num_batches = math.ceil(data_size / batch_size)
 
-        while self.epoch < num_epochs:
-            # Bail out if a sigint is discovered.
-            if self.sigint_sent:
-                self.gracefully_exit()
-            # Measure the timing.
-            start_time = time.time()
+            self.save_hyperparameters()
+            load_model(self.artifact_path)
+            self.load_losses(num_batches)
 
-            # Compute the data range of the batch. Normally this is the full range, but
-            # at the end of the data, this may be a smaller batch.
-            start = self.batch * batch_size
-            end = start + batch_size
-            if self.batch + 1 == num_batches:
-                # The last batch may not be the batch size.
-                end = start + data_size - start
-            data_slice = slice(start, end)
+            print("Beginning training")
+            print(f" Hyperparameters: {self.parameters_path}")
+            print(f" Loss plot: {self.graph_path}")
+            print(f" Loss data: {self.loss_path}")
+            print(f" Model: {self.model_path}")
 
-            # Report where the training is in terms of batches, and epochs.
-            batch_completeness = self.batch * batch_size / data_size
-            epoch_completeness = (self.epoch + batch_completeness) / num_epochs
-            print(
-                f"Epoch {self.epoch + 1}/{num_epochs} ({epoch_completeness * 100:.2f}%). "
-                + f"Batch {self.batch + 1}/{num_batches} ({batch_completeness * 100:.2f}%)"
-            )
+            epoch_loss = 0.0
+            while self.epoch < num_epochs:
+                # Bail out if a sigint is discovered.
+                if self.sigint_sent:
+                    self.gracefully_exit()
+                # Measure the timing.
+                start_time = time.time()
 
-            # Run
-            loss = train_step(data_slice)
-            self.losses.append(loss)
+                # Compute the data range of the batch. Normally this is the full range, but
+                # at the end of the data, this may be a smaller batch.
+                start = self.batch * batch_size
+                end = start + batch_size
+                if self.batch + 1 == num_batches:
+                    # The last batch may not be the batch size.
+                    end = start + data_size - start
+                data_slice = slice(start, end)
 
-            self.graph_loss(num_batches)
-            self.save_losses()
-            save_model(self.artifact_path)
+                # Report where the training is in terms of batches, and epochs.
+                batch_completeness = self.batch * batch_size / data_size
+                epoch_completeness = (self.epoch + batch_completeness) / num_epochs
+                print(
+                    f"Epoch {self.epoch + 1}/{num_epochs} ({epoch_completeness * 100:.2f}%). "
+                    + f"Batch {self.batch + 1}/{num_batches} ({batch_completeness * 100:.2f}%)"
+                )
 
-            elapsed_time = time.time() - start_time
-            per_item_time = 1000.0 * elapsed_time / batch_size
-            print(f"  {elapsed_time:.2f} seconds elapsed for {batch_size} items")
-            print(f"  {per_item_time:.2f} ms per item ")
-            print(f"  {loss:.2f} loss")
+                # Run
+                batch_loss = train_step(data_slice)
+                epoch_loss += batch_loss
+                self.losses.append(batch_loss)
+                mlflow.log_metric("batch_loss", batch_loss)
 
-            # Increment the values.
-            self.batch += 1
-            if self.batch == num_batches:
-                self.epoch += 1
-                self.batch = 0
+                self.graph_loss(num_batches)
+                self.save_losses()
+                save_model(self.artifact_path)
 
-        print("Training complete 🎉")
-        imgcat(open(self.graph_path, "r"))
+                elapsed_time = time.time() - start_time
+                per_item_time = 1000.0 * elapsed_time / batch_size
+                print(f"  {elapsed_time:.2f} seconds elapsed for {batch_size} items")
+                print(f"  {per_item_time:.2f} ms per item ")
+                print(f"  {batch_loss:.2f} loss")
+
+                # Increment the values.
+                self.batch += 1
+                if self.batch == num_batches:
+                    self.epoch += 1
+                    self.batch = 0
+                    mlflow.log_metric("epoch_loss", epoch_loss)
+                    epoch_loss = 0
+
+            print("Training complete 🎉")
+            imgcat(open(self.graph_path, "r"))

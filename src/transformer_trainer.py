@@ -10,6 +10,8 @@ import torch
 from torch import nn, optim, Tensor
 from utils.data_loader import load_data, load_tokenizers
 import argparse
+from mlflow import log_metric, log_param, log_params, log_artifacts
+
 
 """
 Train a transformer model.
@@ -143,7 +145,7 @@ def train_step(data_slice: slice) -> float:
 manager = TrainerManager("transformer", model, p)
 manager.train(
     train_step,
-    #
+    name=f"Translations Model: {args.source}-{args.target}",
     batch_size=p.batch_size,
     num_epochs=100,
     data_size=len(data),
