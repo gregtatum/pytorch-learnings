@@ -22,11 +22,11 @@ def load_tokenizers(source_language: str, target_language: str) -> Tokens:
 
     if not path.exists(model_source):
         raise Exception(
-            f"Can't find: {model_source}\nTry running sentence_tokenization.py first."
+            f"Can't find: {model_source}\nTry running src/build_vocab.py first."
         )
     if not path.exists(model_target):
         raise Exception(
-            f"Can't find: {model_target}\nTry running sentence_tokenization.py first."
+            f"Can't find: {model_target}\nTry running src/build_vocab.py first."
         )
 
     tokens_source = SentencePieceProcessor(model_source)

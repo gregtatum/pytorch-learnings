@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This file loads the Spanish/English dataset from ParaCrawl, and generates a tokenization
+This file loads a parallel corpus dataset from ParaCrawl, and generates a tokenization
 through SentencePiece.
 
 └── data/vocab
@@ -18,13 +18,41 @@ https://github.com/google/sentencepiece
 https://github.com/google/sentencepiece/tree/master/python
 """
 
-from typing import Optional, TypedDict
+import argparse
+from typing import Any, Optional, TypedDict
 from datasets import load_dataset
 from sentencepiece import SentencePieceProcessor, SentencePieceTrainer
 from os import mkdir, path
 
-source_lang = "en"
-target_lang = "es"
+
+def process_args() -> Any:
+    parser = argparse.ArgumentParser(description="Build a vocab for two languages")
+    parser.add_argument(
+        "--source", type=str, help='The source language, e.g. "en"', required=True
+    )
+    parser.add_argument(
+        "--target", type=str, help='The target language, e.g. "es"', required=True
+    )
+    parser.add_argument(
+        "--vocab_size",
+        type=int,
+        help="How many words to generate for a vocab",
+        default=5000,
+    )
+    parser.add_argument(
+        "--input_sentence_size",
+        type=int,
+        help="How many words to generate for a vocab",
+        default=10000,
+    )
+
+    return parser.parse_args()
+
+
+args = process_args()
+
+source_lang = args.source
+target_lang = args.target
 
 ParaCrawlDataset = TypedDict("ParaCrawlDataset", {"translation": list[dict[str, str]]})
 
@@ -83,8 +111,8 @@ def run_sentence_piece(lang: str) -> None:
         SentencePieceTrainer.train(
             input=text_en,
             model_prefix=f"data/vocab/{lang}",
-            vocab_size=5000,
-            input_sentence_size=10000,
+            vocab_size=args.vocab_size,
+            input_sentence_size=args.input_sentence_size,
         )
 
 

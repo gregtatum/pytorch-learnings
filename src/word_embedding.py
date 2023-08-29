@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Perform a word embedding, run src/sentence_tokenization.py first.
+Perform a word embedding, run src/build_vocab.py first.
 
 https://pytorch.org/tutorials/beginner/nlp/word_embeddings_tutorial.html
 """
@@ -60,9 +60,9 @@ def load_tokenizers() -> tuple[SentencePieceProcessor, SentencePieceProcessor]:
     model_es = path.join(data_path, "vocab", "es.model")
 
     if not path.exists(model_en):
-        raise Exception('No "en" model was found, run sentence_tokenization.py first.')
+        raise Exception('No "en" model was found, run src/build_vocab.py first.')
     if not path.exists(model_es):
-        raise Exception('No "es" model was found, run sentence_tokenization.py first.')
+        raise Exception('No "es" model was found, run src/build_vocab.py first.')
 
     tokens_en = SentencePieceProcessor()
     tokens_es = SentencePieceProcessor()
