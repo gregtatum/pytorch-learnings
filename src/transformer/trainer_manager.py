@@ -159,9 +159,10 @@ class TrainerManager:
 
                 # Run
                 batch_loss = train_step(data_slice)
-                epoch_loss += batch_loss
-                self.losses.append(batch_loss)
-                mlflow.log_metric("batch_loss", batch_loss)
+                loss_per_item = batch_loss / (end - start)
+                epoch_loss += batch_loss / data_size
+                self.losses.append(loss_per_item)
+                mlflow.log_metric("batch_loss", loss_per_item)
 
                 self.graph_loss(num_batches)
                 self.save_losses()
@@ -171,7 +172,7 @@ class TrainerManager:
                 per_item_time = 1000.0 * elapsed_time / batch_size
                 print(f"  {elapsed_time:.2f} seconds elapsed for {batch_size} items")
                 print(f"  {per_item_time:.2f} ms per item ")
-                print(f"  {batch_loss:.2f} loss")
+                print(f"  {loss_per_item:.2f} loss")
 
                 # Increment the values.
                 self.batch += 1

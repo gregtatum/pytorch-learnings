@@ -84,7 +84,7 @@ def write_language_text_file(output_path: str, lang: str) -> None:
         print(f"The text file '{output_path_small}' already exists.")
     else:
         print(f"Writing out file '{output_path_small}'.")
-        with open(output_path_big, "w", encoding="utf-8") as f:
+        with open(output_path_small, "w", encoding="utf-8") as f:
             for row in get_dataset()["translation"][:10_000]:
                 f.write(row[lang] + "\n")
 
@@ -108,11 +108,26 @@ def run_sentence_piece(lang: str) -> None:
         print(f"The model file already exists: {model_path}")
     else:
         print(f"Running the training for {lang}")
+        print(path.join(vocab_path, lang + ".txt"))
+        # Traininig options
+        # https://github.com/google/sentencepiece/blob/8cbdf13794284c30877936f91c6f31e2c1d5aef7/doc/options.md
         SentencePieceTrainer.train(
-            input=text_en,
+            input=path.join(vocab_path, lang + ".txt"),
             model_prefix=f"data/vocab/{lang}",
             vocab_size=args.vocab_size,
             input_sentence_size=args.input_sentence_size,
+            # Manually define the special token ordering, and display.
+            pad_id=0,  # Padding token.
+            bos_id=1,  # Beginning of sentence token.
+            eos_id=2,  # End of sentence token.
+            unk_id=3,  # Unknown token.
+            unk_piece="<unk>",
+            bos_piece="<bos>",
+            eos_piece="<eos>",
+            pad_piece="<pad>",
+            unk_surface="<unk>",
+            # Decompose unknown pieces into UTF-8 byte pieces.
+            byte_fallback=True,
         )
 
 

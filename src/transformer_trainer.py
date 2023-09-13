@@ -9,35 +9,31 @@ from transformer.trainer_manager import ArtifactPathFn, TrainerManager
 import torch
 from torch import nn, optim, Tensor
 from utils.data_loader import load_data, load_tokenizers
-import argparse
-from mlflow import log_metric, log_param, log_params, log_artifacts
-
+from tap import Tap
+from torch.nn.utils.rnn import pad_sequence
 
 """
 Train a transformer model.
 """
 
 
-def process_args() -> Any:
-    parser = argparse.ArgumentParser(
-        description="Train a transformer model for translations."
-    )
-    parser.add_argument(
-        "--source", type=str, help='The source language, e.g. "en"', required=True
-    )
-    parser.add_argument(
-        "--target", type=str, help='The target language, e.g. "es"', required=True
-    )
-    parser.add_argument(
-        "--small",
-        help="Use a small test data set which is faster to load",
-        action="store_true",
-    )
+class Arguments(Tap):
+    """
+    Train a transformer model for translations.
 
-    return parser.parse_args()
+    - Train a language on the full corpus:
+      poetry run src/transformer_trainer.py -- --source "en" --target "es"
+
+    - Test the system on a small subset of the corpus:
+      poetry run src/transformer_trainer.py -- --source "en" --target "es" --small
+    """
+
+    source: str  # The source language, e.g. "en"
+    target: str  # The target language, e.g. "es"
+    small: bool = False  # Use a small test data set which is faster to load
 
 
-args = process_args()
+args = Arguments().parse_args()
 
 device = get_device()
 p = HyperParameters(args.source, args.target)
@@ -59,7 +55,8 @@ model.train()
 # Generate random sample data
 torch.manual_seed(1234)
 
-criterion = nn.CrossEntropyLoss(ignore_index=0)
+tokens = load_tokenizers(p.source_language, p.target_language)
+criterion = nn.CrossEntropyLoss(ignore_index=tokens.pad)
 optimizer = optim.Adam(
     model.parameters(),
     lr=p.learning_rate,
@@ -67,39 +64,14 @@ optimizer = optim.Adam(
     eps=p.learning_epsilon,
 )
 
-tokens = load_tokenizers(p.source_language, p.target_language)
-data = load_data(p.source_language, p.target_language, small=True)
+data = load_data(p.source_language, p.target_language, small=args.small)
 
 # Get the tokens for the "begin of a sentence" (bos) and "end of sentence" eos
 
 
 # TODO - This could be made faster if this processing wasn't done on the fly.
 
-sentence_processor = SentenceProcessor(tokens, p.max_seq_length)
-
-
-def process_batch_data(data_slice: slice) -> tuple[Tensor, Tensor]:
-    """
-    Get a batch of data to process.
-    """
-
-    data_batch = data[data_slice]
-
-    return torch.tensor(
-        [
-            sentence_processor.prep_source_sentence(sentence[p.source_language])
-            for sentence in data_batch
-        ],
-        device=device,
-    ), torch.tensor(
-        [
-            sentence_processor.prep_training_target_sentence(
-                sentence[p.target_language]
-            )
-            for sentence in data_batch
-        ],
-        device=device,
-    )
+sentence_processor = SentenceProcessor(tokens, p.max_seq_length, device)
 
 
 def save_model(artifact_path: ArtifactPathFn) -> None:
@@ -124,18 +96,15 @@ def load_model(artifact_path: ArtifactPathFn) -> None:
 
 
 def train_step(data_slice: slice) -> float:
-    # Zero out the gradients for this run.
-    optimizer.zero_grad()
-
-    source_data, target_data = process_batch_data(data_slice)
-
+    source_data, target_data = sentence_processor.get_batch(data, data_slice)
     output = model(source_data, target_data[:, :-1])
 
+    # Perform backward propagation.
+    optimizer.zero_grad()
     loss = criterion(
         output.contiguous().view(-1, p.target_vocab_size),
         target_data[:, 1:].contiguous().view(-1),
     )
-
     loss.backward()
     optimizer.step()
 

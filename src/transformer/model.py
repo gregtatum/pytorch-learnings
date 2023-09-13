@@ -148,6 +148,8 @@ class Transformer(nn.Module):
         max_seq_length: int,
         dropout: float,
         device: Optional[torch.device] = None,
+        # The token ID that represents padding.
+        padding_id: int = 0,
     ) -> None:
         super(Transformer, self).__init__()
         self.encoder_embedding = nn.Embedding(src_vocab_size, d_model, device=device)
@@ -166,15 +168,16 @@ class Transformer(nn.Module):
         self.fc = nn.Linear(d_model, tgt_vocab_size)
         self.dropout = nn.Dropout(dropout)
         self.device = device
+        self.padding_id = padding_id
 
     def generate_mask(
         self, source: Tensor, target: Tensor, device: Optional[torch.device] = None
     ) -> tuple[Tensor, Tensor]:
         # Consider `0` equal to a padding value that should be masked, the `!= 0` converts
         # the tensor into one of `int` indexes, into boolean values.
-        src_mask = (source != 0).unsqueeze(1).unsqueeze(2)
+        src_mask = (source != self.padding_id).unsqueeze(1).unsqueeze(2)
         # e.g. src_mask.shape torch.Size([1, 1, 1, 100])
-        tgt_mask = (target != 0).unsqueeze(1).unsqueeze(3)
+        tgt_mask = (target != self.padding_id).unsqueeze(1).unsqueeze(3)
         # e.g. tgt_mask.shape torch.Size([1, 1, 100, 1])
 
         seq_length = target.size(1)
@@ -185,6 +188,7 @@ class Transformer(nn.Module):
             )
         ).bool()
         tgt_mask = tgt_mask & nopeak_mask
+
         return src_mask, tgt_mask
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:

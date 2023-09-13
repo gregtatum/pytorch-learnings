@@ -8,12 +8,27 @@ data_path = path.abspath(path.join(path.dirname(__file__), "../../data"))
 
 
 class Tokens:
-    source: SentencePieceProcessor
-    target: SentencePieceProcessor
-
-    def __init__(self, source: SentencePieceProcessor, target: SentencePieceProcessor):
+    def __init__(
+        self,
+        source: SentencePieceProcessor,
+        target: SentencePieceProcessor,
+        source_language: str,
+        target_language: str,
+    ):
         self.source = source
         self.target = target
+        self.source_language = source_language
+        self.target_language = target_language
+
+        self.pad: int = source.pad_id()
+        self.bos: int = source.bos_id()
+        self.eos: int = source.eos_id()
+        self.unk: int = source.unk_id()
+
+        assert source.pad_id() == target.pad_id(), "The pad id matches"
+        assert source.bos_id() == target.bos_id(), "The bos id matches"
+        assert source.eos_id() == target.eos_id(), "The eos id matches"
+        assert source.unk_id() == target.unk_id(), "The unk id matches"
 
 
 def load_tokenizers(source_language: str, target_language: str) -> Tokens:
@@ -29,10 +44,14 @@ def load_tokenizers(source_language: str, target_language: str) -> Tokens:
             f"Can't find: {model_target}\nTry running src/build_vocab.py first."
         )
 
-    tokens_source = SentencePieceProcessor(model_source)
-    tokens_target = SentencePieceProcessor(model_target)
+    tokens_source = SentencePieceProcessor(
+        model_file=model_source, add_bos=True, add_eos=True
+    )
+    tokens_target = SentencePieceProcessor(
+        model_file=model_target, add_bos=True, add_eos=True
+    )
 
-    return Tokens(tokens_source, tokens_target)
+    return Tokens(tokens_source, tokens_target, source_language, target_language)
 
 
 def load_data(
