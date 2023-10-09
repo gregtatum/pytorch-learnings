@@ -100,6 +100,7 @@ class TrainerManager:
         num_epochs: int = 0,
         save_model: Optional[Callable[[ArtifactPathFn], None]] = None,
         load_model: Optional[Callable[[ArtifactPathFn], None]] = None,
+        epoch_done: Optional[Callable[[], None]] = None,
     ) -> None:
         if batch_size == 0:
             raise Exception("A batch_size must be provided.")
@@ -180,6 +181,8 @@ class TrainerManager:
                     self.epoch += 1
                     self.batch = 0
                     mlflow.log_metric("epoch_loss", epoch_loss)
+                    if epoch_done:
+                        epoch_done()
                     epoch_loss = 0
 
             print("Training complete 🎉")
