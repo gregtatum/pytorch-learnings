@@ -69,7 +69,18 @@ class TrainerManager:
 
         axes.set_title(f'"{self.name}" Training')
         losses_batch = cast(list, torch.arange(0, len(self.losses), 1))
-        axes.plot(losses_batch, self.losses)
+        filtered_losses = []
+        prev_loss = self.losses[0]
+        for loss in self.losses:
+            if loss - prev_loss < prev_loss * 1.5:
+                prev_loss = loss
+                filtered_losses.append(loss)
+            else:
+                # Ignore this loss, as it's an outlier.
+                prev_loss = loss * 0.2 + prev_loss * 0.8
+                filtered_losses.append(prev_loss)
+
+        axes.plot(losses_batch, filtered_losses)
 
         for i in range(0, math.ceil(len(self.losses) / num_batches)):
             x = i * num_batches
@@ -100,7 +111,8 @@ class TrainerManager:
         num_epochs: int = 0,
         save_model: Optional[Callable[[ArtifactPathFn], None]] = None,
         load_model: Optional[Callable[[ArtifactPathFn], None]] = None,
-        epoch_done: Optional[Callable[[], None]] = None,
+        on_epoch_done: Optional[Callable[[], None]] = None,
+        on_graceful_exit: Optional[Callable[[], None]] = None,
     ) -> None:
         if batch_size == 0:
             raise Exception("A batch_size must be provided.")
@@ -137,6 +149,12 @@ class TrainerManager:
             while self.epoch < num_epochs:
                 # Bail out if a sigint is discovered.
                 if self.sigint_sent:
+                    self.graph_loss(num_batches)
+                    self.save_losses()
+                    save_model(self.artifact_path)
+                    if on_graceful_exit:
+                        on_graceful_exit()
+
                     self.gracefully_exit()
                 # Measure the timing.
                 start_time = time.time()
@@ -165,10 +183,6 @@ class TrainerManager:
                 self.losses.append(loss_per_item)
                 mlflow.log_metric("batch_loss", loss_per_item)
 
-                self.graph_loss(num_batches)
-                self.save_losses()
-                save_model(self.artifact_path)
-
                 elapsed_time = time.time() - start_time
                 per_item_time = 1000.0 * elapsed_time / batch_size
                 print(f"  {elapsed_time:.2f} seconds elapsed for {batch_size} items")
@@ -180,9 +194,14 @@ class TrainerManager:
                 if self.batch == num_batches:
                     self.epoch += 1
                     self.batch = 0
+
                     mlflow.log_metric("epoch_loss", epoch_loss)
-                    if epoch_done:
-                        epoch_done()
+                    self.graph_loss(num_batches)
+                    self.save_losses()
+                    save_model(self.artifact_path)
+
+                    if on_epoch_done:
+                        on_epoch_done()
                     epoch_loss = 0
 
             print("Training complete 🎉")

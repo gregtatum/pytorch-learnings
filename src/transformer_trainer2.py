@@ -107,8 +107,6 @@ def train_step(data_slice: slice) -> float:
     source_data = source_data.t().contiguous()
     target_data = target_data.t().contiguous()
 
-    torch.set_printoptions(threshold=10_000)
-
     # The model predicts the next token, so the last token will never be predicted.
     # The data is arranged like: [sentence_tokens, batch_size]
     target_data_for_model = target_data[:-1, :]
@@ -119,11 +117,11 @@ def train_step(data_slice: slice) -> float:
     optimizer.zero_grad()
 
     loss = criterion(
-        # Output is of shape (trg_len, batch_size, output_dim) but Cross Entropy Loss
-        # doesn't take input in that form. For example if we have MNIST we want to have
-        # output to be: (N, 10) and targets just (N). Here we can view it in a similar
-        # way that we have output_words * batch_size that we want to send in into
-        # our cost function, so we need to do some reshapin.
+        # Reshape output like: [99, 256, 5000] -> [25344, 5000]
+        #  Where:
+        #    max_seq_length: 100
+        #    batch_size: 256
+        #    vocab_size: 5000
         output.reshape(-1, output.shape[2]),
         # Also remove the start token.
         target_data[1:].reshape(-1),
@@ -141,15 +139,17 @@ def train_step(data_slice: slice) -> float:
     return loss.item()
 
 
-def epoch_done() -> None:
-    sentence = "The very existence of space is a real puzzle."
+def test_translation() -> None:
+    sentence = (
+        "They arrived at the bus station early but waited until noon for the bus."
+    )
+    print("Source sentence", sentence)
     output_sentence, output_tokens = translate_sentence(
         model,
         sentence,
         tokens,
         device,
     )
-    print("Source sentence", sentence)
     print("Target sentence", output_sentence)
     print("Target tokens", output_tokens)
 
@@ -163,7 +163,8 @@ manager.train(
     name=f"Translations Model: {args.source}-{args.target}",
     batch_size=p.batch_size,
     num_epochs=100,
-    epoch_done=epoch_done,
+    on_epoch_done=test_translation,
+    on_graceful_exit=test_translation,
     data_size=len(data),
     save_model=save_model,
     load_model=load_model,

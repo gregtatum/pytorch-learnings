@@ -1,3 +1,8 @@
+from os import path
+import json
+from typing import Self
+
+
 class HyperParameters:
     def __init__(self, source_language: str, target_language: str) -> None:
         self.source_language = source_language
@@ -21,3 +26,21 @@ class HyperParameters:
 
         # number of `nn.TransformerEncoderLayer` in `nn.TransformerEncoder`
         self.num_layers = 6
+
+    def load_from_file(json_path: str) -> Self:
+        p = HyperParameters("", "")
+        if not path.exists(json_path):
+            raise Exception(f"Expected the json path to exist: {json_path}")
+
+        with open(json_path, "r", encoding="utf-8") as file:
+            p_json = json.load(file)
+
+        for param in p.__dict__:
+            if param not in p.__dict__:
+                raise Exception(f"Parameter not found in HyperParameters class {param}")
+            if param not in p_json:
+                raise Exception(f"Parameter not found in json {param}")
+
+            p.__dict__[param] = p_json[param]
+
+        return p

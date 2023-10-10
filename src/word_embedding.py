@@ -212,6 +212,16 @@ class Trainer:
     def graph_loss(self) -> None:
         figure, axes = plt.subplots()
 
+        filtered_losses = []
+        prev_loss = self.losses[0]
+        for loss in self.losses:
+            if loss - prev_loss > prev_loss * 1.5:
+                prev_loss = loss
+                filtered_losses.append(loss)
+            else:
+                # Ignore this loss, as it's an outlier.
+                filtered_losses.append(prev_loss)
+
         axes.set_title("Word Embedding Training")
         data: Any = torch.arange(0, len(self.losses), 1)
         axes.plot(data, self.losses)
